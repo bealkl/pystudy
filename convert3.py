@@ -63,35 +63,64 @@ def look_for(patient):
             # If neither exists, assign an empty string
             record['firstName'] = ''
 
+    if check_dictionary_key(patient, 'age'):
+        record['age'] = patient['age']
+    else:
+        record['age'] = ''
 
-            country = patient['_countries']
-            mails = patient['_mails']
-            phone = patient['_phones']
-            remark = patient['remark']
-            gender = patient['gender']
-            age = patient['age']
-            languages = patient['language']
-            registered = patient['registered']
-            number = patient['number']
-            courses = patient['courses']
-            extraInfo = patient['extraInfo']
-            print(f"ID: {id}, Full Name: {fullName}, Full Name English: {fullNameEnglish}, "
-                  f"Last Name: {lastName}, Last Name English: {lastNameEnglish} ")
-            print(f"languages: {languages}, "
-                  f"registered: {registered}, " 
-                f"age: {age}, "
-                f"number: {number}, courses: {courses} "
-                f"Country: {country}, Mails: {mails}, Phones: {phone} ")
-            extraInfo_isTranslatorRequired = extraInfo['isTranslatorRequired']
-            extraInfo_extraTesting = extraInfo['extraTesting']
-            extraInfo_isExtraTesting = extraInfo['isExtraTesting']
-            extraInfo_wheelchair = extraInfo['wheelchair']
-            print(f"Is Translator Required: {extraInfo_isTranslatorRequired}, "
-                    f"Extra Testing: {extraInfo_extraTesting}, "
-                    f"Is Extra Testing: {extraInfo_isExtraTesting}, "
-                    f"Wheelchair: {extraInfo_wheelchair}")
-            # print(patient)
-            break
+    if check_dictionary_key(patient, 'gender'):
+        record['gender'] = patient['gender']
+    else:
+        record['gender'] = ''
+
+    if check_dictionary_key(patient, 'language'):
+        record['language'] = patient['language']
+    else:
+        record['language'] = ''
+
+    if check_dictionary_key(patient, 'number'):
+        number1 = patient['number']
+        print(f"Number before: {number1} ")
+        numbers = number1.split('-')
+        print(numbers)
+        number_counter = int(numbers[1])
+        if len(numbers[0]) >6:
+            # Remove the 4th and 5th symbols (index 3 and 4 in zero-based indexing)
+            number_normalize = numbers[0][:4] + numbers[0][6:]
+            numbers[0] = number_normalize
+
+        record['number'] = numbers[0] + '-' + str(number_counter)
+        print(f"Number after: {record['number']} ")
+    else:
+        record['number'] = ''
+
+
+    return record
+
+            # country = patient['_countries']
+            # mails = patient['_mails']
+            # phone = patient['_phones']
+            # remark = patient['remark']
+            # gender = patient['gender']
+            # courses = patient['courses']
+            # extraInfo = patient['extraInfo']
+            # print(f"ID: {id}, Full Name: {fullName}, Full Name English: {fullNameEnglish}, "
+            #       f"Last Name: {lastName}, Last Name English: {lastNameEnglish} ")
+            # print(f"languages: {languages}, "
+            #       f"registered: {registered}, "
+            #     f"age: {age}, "
+            #     f"number: {number}, courses: {courses} "
+            #     f"Country: {country}, Mails: {mails}, Phones: {phone} ")
+            # extraInfo_isTranslatorRequired = extraInfo['isTranslatorRequired']
+            # extraInfo_extraTesting = extraInfo['extraTesting']
+            # extraInfo_isExtraTesting = extraInfo['isExtraTesting']
+            # extraInfo_wheelchair = extraInfo['wheelchair']
+            # print(f"Is Translator Required: {extraInfo_isTranslatorRequired}, "
+            #         f"Extra Testing: {extraInfo_extraTesting}, "
+            #         f"Is Extra Testing: {extraInfo_isExtraTesting}, "
+            #         f"Wheelchair: {extraInfo_wheelchair}")
+            # # print(patient)
+            # break
 
 
 
@@ -116,9 +145,17 @@ def main():
             # Read all documents from the patients collection
             patients = patients_collection.find()
 
+            counter = 0
             # Print each patient document
             for patient in patients:
-                look_for(patient)
+                record=look_for(patient)
+                print(record)
+                counter += 1
+                if counter >10:
+                    break
+                # if counter % 1000 == 0:
+                #     print(f"Processed {counter} patient records.")
+            # print(f"Processed {counter} patient records.")
 
         except OperationFailure as e:
             print(f"An error occurred while querying the database: {e}")
