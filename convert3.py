@@ -172,7 +172,10 @@ def look_for(patient):
 
 # Extra diagnosis
     if check_dictionary_key(patient, 'diagnoses'):
-        for diagnoses in patient['diagnoses']:
+        for diag in patient['diagnoses']:
+            if check_dictionary_key(diag, 'diagnosis'):
+                diagnoses = str(diag['diagnosis'])
+
             if diagnoses['name'] == 'Other':
                 # If the diagnosis is 'Other', use the 'extraDiagnosis' field
                 record['extraDiagnosis'] = diagnoses['extraDiagnosis'].strip().replace("<br />","; ")
