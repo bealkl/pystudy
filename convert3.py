@@ -2,6 +2,7 @@
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure
 import re
+from old_diagnoses import old_diagnoses
 from setuptools.command.build_ext import link_shared_object
 
 def check_dictionary_key(doc, key):
@@ -162,6 +163,27 @@ def look_for(patient):
     else:
         record['email'] = ''
         record['alt_emails'] = ''
+
+# Diagnosis
+    if check_dictionary_key(patient, 'diagnosis_list'):
+        record['diagnosis'] = str(patient['diagnosis_list']).strip().replace("<br />","; ")
+    else:
+        record['diagnosis'] = ''
+
+# Extra diagnosis
+    if check_dictionary_key(patient, 'diagnoses'):
+        for diagnoses in patient['diagnoses']:
+            if diagnoses['name'] == 'Other':
+                # If the diagnosis is 'Other', use the 'extraDiagnosis' field
+                record['extraDiagnosis'] = diagnoses['extraDiagnosis'].strip().replace("<br />","; ")
+                break
+        record['extraDiagnosis'] = str(patient['diagnoses']).strip().replace("<br />","; ")
+    else:
+        record['extraDiagnosis'] = ''
+
+
+
+
 
 
     return record
