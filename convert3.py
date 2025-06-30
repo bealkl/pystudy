@@ -68,6 +68,9 @@ def look_for(patient):
     else:
         record['age'] = ''
 
+    if check_dictionary_key(patient, 'birthDate'):
+        record['birthDate'] = patient['birthDate'].strftime("%Y-%m-%d")
+
     if check_dictionary_key(patient, 'gender'):
         record['gender'] = patient['gender']
     else:
@@ -89,6 +92,34 @@ def look_for(patient):
         record['number'] = numbers[0] + '-' + str(number_counter)
     else:
         record['number'] = ''
+
+    if not check_dictionary_key(patient, 'status'):
+        record['status'] = ''
+    else:
+        match patient['status']:
+            case 'RRV Report received':
+                record['status'] = 'RRV Report Received'
+            case 'INV Invited':
+                record['status'] = 'inactive'
+            case 'FAP First application':
+                record['status'] = 'deleted'
+            case 'TRE Treated':
+                record['status'] = 'TRE Treated'
+            case 'REF Refused:
+                record['status'] = 'REF Refused'
+            case 'EAW Early age':
+                record['status'] = 'EAW Early age'
+            case 'PDD Patient Died':
+                record['status'] = 'PDD Patient died'
+            case 'RPT (Repeat Patient)':
+                record['status'] = 'RPT (Repeat Patient)'
+            case 'FUP (FollowUp)':
+                record['status'] = 'FUP (FollowUp)'
+            case 'PTR (Planed treatment)':
+                record['status'] = 'PTR (Planed treatment)'
+            case _:
+                record['status'] = ''
+
 
 
     return record
