@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure
+import re
 from setuptools.command.build_ext import link_shared_object
 
 def check_dictionary_key(doc, key):
@@ -21,7 +22,7 @@ def check_dictionary_key(doc, key):
 def look_for(patient):
     record= {'id': patient['_id']}
 
-    # fill in the 'lastNameOrigin' field
+# fill in the 'lastNameOrigin' field
     if check_dictionary_key(patient, 'lastName'):
         record['lastNameOrigin'] = patient['lastName']
     else:
@@ -45,7 +46,7 @@ def look_for(patient):
                 record['lastName'] = patient['number']  # or any other default value
                 # record['lastName'] = ''
 
-    # fill in the 'firstNameOrigin' field
+# fill in the 'firstNameOrigin' field
     if check_dictionary_key(patient, 'firstName'):
         record['firstNameOrigin'] = patient['firstName']
     else:
@@ -62,25 +63,25 @@ def look_for(patient):
         else:
             # If neither exists, assign an empty string
             record['firstName'] = ''
-
+# age
     if check_dictionary_key(patient, 'age'):
         record['age'] = patient['age']
     else:
         record['age'] = ''
-
+# DOB
     if check_dictionary_key(patient, 'birthDate'):
         record['birthDate'] = patient['birthDate'].strftime("%Y-%m-%d")
-
+# gender
     if check_dictionary_key(patient, 'gender'):
         record['gender'] = patient['gender']
     else:
         record['gender'] = ''
-
+# language
     if check_dictionary_key(patient, 'language'):
         record['language'] = patient['language']
     else:
         record['language'] = ''
-
+# number
     if check_dictionary_key(patient, 'number'):
         numbers = patient['number'].split('-')
         number_counter = '{}'.format(numbers[1][1:] if numbers[1].startswith('0') else numbers[1])
@@ -92,33 +93,42 @@ def look_for(patient):
         record['number'] = numbers[0] + '-' + str(number_counter)
     else:
         record['number'] = ''
-
+# status
+    category = ''
     if not check_dictionary_key(patient, 'status'):
-        record['status'] = ''
+        record['category'] = ''
     else:
         match patient['status']:
             case 'RRV Report received':
-                record['status'] = 'RRV Report Received'
+                category = 'RRV Report Received'
             case 'INV Invited':
-                record['status'] = 'inactive'
+                category = 'INV (Invited)'
             case 'FAP First application':
-                record['status'] = 'deleted'
+                category = 'FAP First application'
             case 'TRE Treated':
-                record['status'] = 'TRE Treated'
+                category = 'TRE Treated'
             case 'REF Refused':
-                record['status'] = 'REF Refused'
+                category = 'REF Refused'
             case 'EAW Early age':
-                record['status'] = 'EAW Early age'
+                category = 'EAW Early age'
             case 'PDD Patient Died':
-                record['status'] = 'PDD Patient died'
+                category = 'PDD Patient died'
             case 'RPT (Repeat Patient)':
-                record['status'] = 'RPT (Repeat Patient)'
+                category = 'RPT (Repeat Patient)'
             case 'FUP (FollowUp)':
-                record['status'] = 'FUP (FollowUp)'
+                category = 'FUP (FollowUp)'
             case 'PTR (Planed treatment)':
-                record['status'] = 'PTR (Planed treatment)'
+                category = 'PTR (Planed treatment)'
             case _:
-                record['status'] = ''
+                record['category'] = ''
+    record['category'] = category
+
+    # fill in the 'countre' field
+    if check_dictionary_key(patient, '_countries'):
+        regex = r"[a-zA-Z][a-zA-Z]" # Regex to match two-letter country codes
+        record['country'] = re.search(regex, patient['_countries']).group()
+    else:
+        record['country'] = ''
 
 
 
@@ -128,7 +138,6 @@ def look_for(patient):
             # mails = patient['_mails']
             # phone = patient['_phones']
             # remark = patient['remark']
-            # gender = patient['gender']
             # courses = patient['courses']
             # extraInfo = patient['extraInfo']
             # print(f"ID: {id}, Full Name: {fullName}, Full Name English: {fullNameEnglish}, "
@@ -147,7 +156,6 @@ def look_for(patient):
             #         f"Is Extra Testing: {extraInfo_isExtraTesting}, "
             #         f"Wheelchair: {extraInfo_wheelchair}")
             # # print(patient)
-            # break
 
 
 
