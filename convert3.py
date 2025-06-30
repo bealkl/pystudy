@@ -105,7 +105,7 @@ def look_for(patient):
                 record['status'] = 'deleted'
             case 'TRE Treated':
                 record['status'] = 'TRE Treated'
-            case 'REF Refused:
+            case 'REF Refused':
                 record['status'] = 'REF Refused'
             case 'EAW Early age':
                 record['status'] = 'EAW Early age'
