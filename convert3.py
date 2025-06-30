@@ -79,18 +79,14 @@ def look_for(patient):
         record['language'] = ''
 
     if check_dictionary_key(patient, 'number'):
-        number1 = patient['number']
-        print(f"Number before: {number1} ")
-        numbers = number1.split('-')
-        print(numbers)
-        number_counter = int(numbers[1])
+        numbers = patient['number'].split('-')
+        number_counter = '{}'.format(numbers[1][1:] if numbers[1].startswith('0') else numbers[1])
         if len(numbers[0]) >6:
             # Remove the 4th and 5th symbols (index 3 and 4 in zero-based indexing)
             number_normalize = numbers[0][:4] + numbers[0][6:]
             numbers[0] = number_normalize
-
+        # make the correct number
         record['number'] = numbers[0] + '-' + str(number_counter)
-        print(f"Number after: {record['number']} ")
     else:
         record['number'] = ''
 
