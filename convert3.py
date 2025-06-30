@@ -20,7 +20,7 @@ def check_dictionary_key(doc, key):
     return True
 
 def look_for(patient):
-    record= {'id': patient['_id']}
+    record= {'id': str(patient['_id'])}
 
 # fill in the 'lastNameOrigin' field
     if check_dictionary_key(patient, 'lastName'):
@@ -30,17 +30,17 @@ def look_for(patient):
 
     # fill in the 'lastName' field
     if check_dictionary_key(patient, 'lastNameEnglish'):
-        record['lastName'] = patient['lastNameEnglish']
+        record['lastName'] = patient['lastNameEnglish'].capitalize()
     else:
         if check_dictionary_key(patient, 'fullNameEnglish'):
             # If 'lastNameEnglish' doesn't exist, check 'fullNameEnglish'
             # and assign it to 'lastName' in the record
-            record['lastName'] = patient['fullNameEnglish']
+            record['lastName'] = patient['fullNameEnglish'].capitalize()
         else:
             if check_dictionary_key(patient, 'fullName'):
                 # If neither 'lastNameEnglish' nor 'fullNameEnglish' exists,
                 # check 'fullName' and assign it to 'lastName' in the record
-                record['lastName'] = patient['fullName']
+                record['lastName'] = patient['fullName'].capitalize()
             else:
                 # If neither exists, assign an empty string
                 record['lastName'] = patient['number']  # or any other default value
@@ -54,33 +54,38 @@ def look_for(patient):
 
     # fill in the 'firstName' field
     if check_dictionary_key(patient, 'firstNameEnglish'):
-        record['firstName'] = patient['firstNameEnglish']
+        record['firstName'] = patient['firstNameEnglish'].capitalize()
     else:
         if check_dictionary_key(patient, 'firstName'):
             # If 'firstNameEnglish' doesn't exist, check 'fullNameEnglish'
             # and assign it to 'firstName' in the record
-            record['firstName'] = patient['firstName']
+            record['firstName'] = patient['firstName'].capitalize()
         else:
             # If neither exists, assign an empty string
             record['firstName'] = ''
+
 # age
     if check_dictionary_key(patient, 'age'):
         record['age'] = patient['age']
     else:
         record['age'] = ''
+
 # DOB
     if check_dictionary_key(patient, 'birthDate'):
         record['birthDate'] = patient['birthDate'].strftime("%Y-%m-%d")
+
 # gender
     if check_dictionary_key(patient, 'gender'):
         record['gender'] = patient['gender']
     else:
         record['gender'] = ''
+
 # language
     if check_dictionary_key(patient, 'language'):
         record['language'] = patient['language']
     else:
         record['language'] = ''
+
 # number
     if check_dictionary_key(patient, 'number'):
         numbers = patient['number'].split('-')
@@ -93,35 +98,23 @@ def look_for(patient):
         record['number'] = numbers[0] + '-' + str(number_counter)
     else:
         record['number'] = ''
+
 # status
-    category = ''
-    if not check_dictionary_key(patient, 'status'):
-        record['category'] = ''
-    else:
-        match patient['status']:
-            case 'RRV Report received':
-                category = 'RRV Report Received'
-            case 'INV Invited':
-                category = 'INV (Invited)'
-            case 'FAP First application':
-                category = 'FAP First application'
-            case 'TRE Treated':
-                category = 'TRE Treated'
-            case 'REF Refused':
-                category = 'REF Refused'
-            case 'EAW Early age':
-                category = 'EAW Early age'
-            case 'PDD Patient Died':
-                category = 'PDD Patient died'
-            case 'RPT (Repeat Patient)':
-                category = 'RPT (Repeat Patient)'
-            case 'FUP (FollowUp)':
-                category = 'FUP (FollowUp)'
-            case 'PTR (Planed treatment)':
-                category = 'PTR (Planed treatment)'
-            case _:
-                record['category'] = ''
-    record['category'] = category
+    if check_dictionary_key(patient, 'status'):
+        category_list= { "534261884ca876bb9b7b187a": 'RRV Report Received',
+                         "534261804ca876bb9b7b1878": 'INV (Invited)',
+                         "534261904ca876bb9b7b187c": 'FAP First application',
+                         "5342619b4ca876bb9b7b187e": 'TRE Treated',
+                         "534670eed320232052caedc6": 'REF Refused',
+                         "541d44d556d27127195639f7": 'EAW Early age',
+                         "5469a52d01bc038d04141865": 'PDD Patient died',
+                         "54b3c5a2fb4f21a804cba6a5": 'PRF Primary Feedback'}
+        status1 = str(patient['status'])
+        if status1 in category_list:
+            record['status'] = category_list[status1]
+            print(f"Status: {category_list[status1]}")
+        else:
+            record['status'] = ''
 
     # fill in the 'countre' field
     if check_dictionary_key(patient, '_countries'):
@@ -130,6 +123,45 @@ def look_for(patient):
     else:
         record['country'] = ''
 
+#  Phone numbers
+    if check_dictionary_key(patient, '_phones'):
+        phones = patient['_phones'].split(',')
+        # Normalize phone numbers by removing spaces and dashes
+        # phones = [phone.strip().replace(' ', '').replace('-', '') for phone in phones if phone.strip()]
+        record['phone'] = phones[0].strip()
+        skip0=True
+        if len(phones) > 1:
+            for phone in phones:
+                # If there are multiple phone numbers, take the next ones as alternative phones
+                if skip0:
+                    skip0=False
+                    continue
+                record['alt_phones'] = str(phone).strip()+";"
+        else: # If no phone numbers are found, set to empty strings
+            record['alt_phones'] = ''
+    else:
+        record['phone'] = ''
+        record['alt_phones'] = ''
+
+#  Emails
+    if check_dictionary_key(patient, '_mails'):
+        emails = patient['_mails'].split(',')
+        # Normalize emails by removing spaces
+        emails = [email.strip() for email in emails if email.strip()]
+        record['email'] = emails[0] if emails else ''
+        skip0=True
+        if len(emails) > 1:
+            for email in emails:
+                # If there are multiple emails, take the next ones as alternative emails
+                if skip0:
+                    skip0=False
+                    continue
+                record['alt_emails'] = str(email).strip()+";"
+        else: # If no emails are found, set to empty strings
+            record['alt_emails'] = ''
+    else:
+        record['email'] = ''
+        record['alt_emails'] = ''
 
 
     return record
@@ -186,7 +218,7 @@ def main():
                 record=look_for(patient)
                 print(record)
                 counter += 1
-                if counter >10:
+                if counter >15:
                     break
                 # if counter % 1000 == 0:
                 #     print(f"Processed {counter} patient records.")
