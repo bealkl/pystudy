@@ -265,8 +265,34 @@ def look_for(patient):
             if len(record['courses']) > 0: record['courses'] = record['courses'] + "; "
     else:
         record['courses'] = ''
-    if record['courses']: print(f"record['courses']: {record['courses']}")
 
+# cureplans
+    if check_dictionary_key(patient, 'cureplans'):
+        record['cureplans'] = ''
+        for cureplan in patient['cureplans']:
+            if check_dictionary_key(cureplan, 'beginDate'):
+                record['cureplans'] = record['cureplans'] + cureplan['beginDate'].strftime("%Y-%m-%d")
+            if check_dictionary_key(cureplan, 'endDate'):
+                record['cureplans'] = record['cureplans'] +".."+ cureplan['endDate'].strftime("%Y-%m-%d")
+            if check_dictionary_key(cureplan, 'bookingWhere'):
+                record['cureplans'] = record['cureplans'] + ", " + str(cureplan['bookingWhere']).strip()
+            if check_dictionary_key(cureplan, 'hasBooking'):
+                if cureplan['hasBooking']:
+                    record['cureplans'] = record['cureplans'] + ", " + "Booking"
+                else:
+                    record['cureplans'] = record['cureplans'] + ", " + "No Booking"
+            if check_dictionary_key(cureplan, 'hasTickets'):
+                if cureplan['hasTickets']:
+                    record['cureplans'] = record['cureplans'] + ", " + "Tickets"
+                else:
+                    record['cureplans'] = record['cureplans'] + ", " + "No Tickets"
+            if check_dictionary_key(cureplan, 'payment'):
+                record['cureplans'] = record['cureplans'] + ", payment" + str(cureplan['payment']).strip()
+            if check_dictionary_key(cureplan, 'remark'):
+                record['cureplans'] = record['cureplans'] + ", " + str(cureplan['remark']).strip()
+            if len(record['cureplans']) > 0: record['cureplans'] = record['cureplans'] + "; "
+    else:
+        record['cureplans'] = ''
 
     return record
 
