@@ -192,7 +192,70 @@ def look_for(patient):
     else:
         record['extraDiagnosis'] = ''
 
+# contacts
+    if check_dictionary_key(patient, 'contacts'):
+        # record['contacts'] = ''
+        for contact in patient['contacts']:
+            address = ''
+            if check_dictionary_key(contact,'country'):
+                country=str(contact['country'])
+                if len(country)>1: address+=country+"; "
+            if check_dictionary_key(contact,'region'):
+                region=str(contact['region'])
+                if len(region)>1: address+=region+"; "
+            if check_dictionary_key(contact,'city'):
+                city=str(contact['city'])
+                if len(city)>1: address+=city+"; "
+            if check_dictionary_key(contact,'index'):
+                index=str(contact['index'])
+                if len(index)>1: address+=index+"; "
+            if check_dictionary_key(contact,'streetAddress'):
+                street_address=str(contact['streetAddress'])
+                if len(street_address)>1: address+=street_address+"; "
+            if check_dictionary_key(contact,'emails'):
+                for email in contact['emails']:
+                    if check_dictionary_key(email,'address'):
+                        email_address = str(email['address']).strip()
+                        if len(email_address) > 1:
+                            if email_address in record['email']: continue
+                            if email_address in record['alt_emails']: continue
+                            if len(address) > 0: address += "; "
+                            address += email_address
+                    if check_dictionary_key(email,'remark'):
+                        email_remark = str(email['remark']).strip().replace("Origin: ", "")
+                        if len(email_remark) > 1:
+                            if email_remark in record['email']: continue
+                            if email_remark in record['alt_emails']: continue
+                            if len(address) > 0: address += "; "
+                            address += email_remark
+            if check_dictionary_key(contact,'phones'):
+                for phone in contact['phones']:
+                    if check_dictionary_key(phone,'number'):
+                        phone_kind = ''
+                        phone_number = str(phone['number']).strip()
+                        if check_dictionary_key(phone,'kind'):
+                            phone_kind = str(phone['kind']).strip()
+                            if len(phone_kind) > 1:
+                                phone_kind = "("+phone_kind+")"
+                        if len(phone_number) > 1:
+                            if phone_number in record['phone']: continue
+                            if phone_number in record['alt_phones']: continue
+                            if len(address) > 0: address += "; "
+                            address += phone_number+ " ("+phone_kind+")"
+                    if check_dictionary_key(phone,'additional'):
+                        phone_remark = str(phone['additional']).strip().replace("Original: ", "")
+                        if len(phone_remark) > 1:
+                            if phone_remark in record['phone']: continue
+                            if phone_remark in record['alt_phones']: continue
+                            if len(address) > 0: address += "; "
+                            address += phone_remark
+            record['recvizit'] = address.strip().replace("; ; ", ";")
+            print(f"record['recvizit']: {record['recvizit']}")
 
+
+
+    else:
+        record['contacts'] = ''
 
 
 
@@ -249,7 +312,7 @@ def main():
             # Print each patient document
             for patient in patients:
                 record=look_for(patient)
-                print(record)
+                #print(record)
                 counter += 1
                 if counter >15:
                     break
