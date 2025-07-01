@@ -194,7 +194,6 @@ def look_for(patient):
 
 # contacts
     if check_dictionary_key(patient, 'contacts'):
-        # record['contacts'] = ''
         for contact in patient['contacts']:
             address = ''
             if check_dictionary_key(contact,'country'):
@@ -249,15 +248,24 @@ def look_for(patient):
                             if phone_remark in record['alt_phones']: continue
                             if len(address) > 0: address += "; "
                             address += phone_remark
-            record['recvizit'] = address.strip().replace("; ; ", ";")
-            print(f"record['recvizit']: {record['recvizit']}")
-
-
-
+            record['contacts'] = address.strip().replace("; ; ", ";")
     else:
         record['contacts'] = ''
 
-
+# courses
+    if check_dictionary_key(patient, 'courses'):
+        record['courses'] = ''
+        for course in patient['courses']:
+            if check_dictionary_key(course, 'courseBegin'):
+                record['courses'] = record['courses'] + course['courseBegin'].strftime("%Y-%m-%d")
+            if check_dictionary_key(course, 'courseEnd'):
+                record['courses'] = record['courses'] + ".." + course['courseEnd'].strftime("%Y-%m-%d")
+            if check_dictionary_key(course, 'remark'):
+                record['courses'] = record['courses'] + ", " + str(course['remark']).strip().replace("Original ", "")
+            if len(record['courses']) > 0: record['courses'] = record['courses'] + "; "
+    else:
+        record['courses'] = ''
+    if record['courses']: print(f"record['courses']: {record['courses']}")
 
 
     return record
