@@ -188,7 +188,7 @@ def look_for(patient):
                     continue
                 if len(this_key)>0: record['extraDiagnosis']+= str(key) + " " + this_key + "; "
             i+=1
-        print(f"record['extraDiagnosis']: {record['extraDiagnosis']}")
+#        print(f"record['extraDiagnosis']: {record['extraDiagnosis']}")
     else:
         record['extraDiagnosis'] = ''
 
