@@ -113,7 +113,7 @@ def look_for(patient):
         status1 = str(patient['status'])
         if status1 in category_list:
             record['status'] = category_list[status1]
-            print(f"Status: {category_list[status1]}")
+            # print(f"Status: {category_list[status1]}")
         else:
             record['status'] = ''
 
@@ -172,15 +172,23 @@ def look_for(patient):
 
 # Extra diagnosis
     if check_dictionary_key(patient, 'diagnoses'):
+        record['extraDiagnosis']= ''
+        i=1
         for diag in patient['diagnoses']:
-            if check_dictionary_key(diag, 'diagnosis'):
-                diagnoses = str(diag['diagnosis'])
-
-            if diagnoses['name'] == 'Other':
-                # If the diagnosis is 'Other', use the 'extraDiagnosis' field
-                record['extraDiagnosis'] = diagnoses['extraDiagnosis'].strip().replace("<br />","; ")
-                break
-        record['extraDiagnosis'] = str(patient['diagnoses']).strip().replace("<br />","; ")
+            record['extraDiagnosis']+= " ("+str(i)+") "
+            for key in diag.keys():
+                this_key=str(diag[key])
+                if key == 'diagnosis':
+                    # If the key is 'diagnosis', we have to check if it exists in the old_diagnoses dictionary
+                    if check_dictionary_key(old_diagnoses, 'diagnosis'):
+                        record['extraDiagnosis'] = record['extraDiagnosis']+"; діагноз: "+ old_diagnoses[this_key]
+                    continue
+                if key == '_id':
+                    # If the key is '_id', we skip it
+                    continue
+                if len(this_key)>0: record['extraDiagnosis']+= str(key) + " " + this_key + "; "
+            i+=1
+        print(f"record['extraDiagnosis']: {record['extraDiagnosis']}")
     else:
         record['extraDiagnosis'] = ''
 
