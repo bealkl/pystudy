@@ -294,11 +294,18 @@ def look_for(patient):
     else:
         record['cureplans'] = ''
 
-# edited_at - останні зміни
-    if check_dictionary_key(patient, 'edited_at'):
-        record['edited_at'] = patient['edited_at'].strftime("%Y-%m-%d")
+# registered
+    if check_dictionary_key(patient, 'remark'):
+        record['remark'] = patient['remark']
     else:
-        record['edited_at'] = ''
+        record['remark'] = ''
+
+# remark
+    if check_dictionary_key(patient, 'registered'):
+        record['registered'] = patient['registered'].strftime("%Y-%m-%d")
+    else:
+        record['registered'] = ''
+
 
 # wheelchair
     if check_dictionary_key(patient, 'extraInfo'):
