@@ -31,6 +31,7 @@ def check_dictionary_key(doc, key):
 
 
 def partners_semantic_analysis(partner):
+    passport_record: str= ''
     record = {'id': str(partner['_id'])}
 
     # fill in the 'lastName' and 'firstname' fields
@@ -52,6 +53,7 @@ def partners_semantic_analysis(partner):
                 record['firstName'] = partner['firstName'].capitalize()
             else:
                 record['firstName'] = ''
+    record['firstName'] = record['firstName'].replace('()','').strip()
 
     # gender
     if check_dictionary_key(partner, 'gender'):
@@ -248,6 +250,34 @@ def partners_semantic_analysis(partner):
                     # continue
                 # this_value=str(office[key])
                 # if len(this_value)>0: print(f"{this_key}: {this_value}")
+# passport
+                record['passports']=''
+                if check_dictionary_key(partner, 'passports'):
+                    passports = partner['passports']
+                    for passport in passports:
+                        passport_record = ''
+                        if len(record['passports'])> 0:
+                            record['passports'] += '; '
+                        if check_dictionary_key(passport, 'number'):
+                            passport_number = passport['number'].strip()
+                            passport_record = passport_number
+                        if check_dictionary_key(passport, 'kind'):
+                            passport_kind = passport['kind'].strip()
+                            passport_record += ' (' + passport_kind + ')'
+                        if check_dictionary_key(passport, 'validTo'):
+                            passport_valid_to = passport['validTo'].strftime("%Y-%m-%d")
+                            passport_record += ', validTo: ' + passport_valid_to
+                        if check_dictionary_key(passport, 'remark'):
+                            passport_remark = passport['remark'].strip()
+                            if len(passport_remark) > 0:
+                                passport_record += ', : ' + passport_remark
+                        # print(f"{record['code']} - passport_record: {passport_record}")
+                        record['passports'] += passport_record
+
+
+
+
+
 
 
 
