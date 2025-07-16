@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+#!/usr/bin/env python3
+from datetime import datetime
+
+import pandas as pd
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure
 import re
-import pandas as pd
-from datetime import datetime
 from old_diagnoses import old_diagnoses
 from setuptools.command.build_ext import link_shared_object
 
@@ -348,10 +350,12 @@ def main():
             # Process each patient document
             for patient in patients:
                 record_patients = look_for(patient)
+                print(record_patients)
+                print(f"Processing patient {counter + 1} with ID: {record_patients['id']}")
                 all_records.append(record_patients)
                 counter += 1
-                if counter % 1000 == 0:
-                    print(f"Processed {counter} patient records.")
+                # if counter % 100 == 0:
+                #     print(f"Processed {counter} patient records.")
 
             # Create DataFrame from records
             df = pd.DataFrame(all_records)

@@ -51,7 +51,8 @@ cmake-build-*/
 
 # File-based project format
 *.iws
-
+*.xlsx
+*.xls
 # IntelliJ
 out/
 
