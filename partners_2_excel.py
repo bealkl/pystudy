@@ -6,10 +6,7 @@ from pymongo.errors import OperationFailure
 import re
 import pandas as pd
 from datetime import datetime
-
-
 from unicodedata import normalize
-
 from old_diagnoses import old_diagnoses
 from setuptools.command.build_ext import link_shared_object
 
@@ -182,7 +179,7 @@ def partners_semantic_analysis(partner):
         if check_dictionary_key(partner['home'], 'country'):
             record['country']= partner['home']['country'].strip()
         if check_dictionary_key(partner['home'], 'streetAddress'):
-            record['streetAddress']= 'Street address: ' + partner['home']['streetAddress'].strip()
+            record['streetAddress']= '' + partner['home']['streetAddress'].strip()
 
     # offices
     if check_dictionary_key(partner, 'offices'):

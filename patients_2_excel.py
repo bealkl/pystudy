@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-#!/usr/bin/env python3
-from datetime import datetime
-
-import pandas as pd
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure
 import re
@@ -322,20 +318,45 @@ def look_for(patient):
 
     return record
 
+    # country = patient['_countries']
+    # mails = patient['_mails']
+    # phone = patient['_phones']
+    # remark = patient['remark']
+    # courses = patient['courses']
+    # extraInfo = patient['extraInfo']
+    # print(f"ID: {id}, Full Name: {fullName}, Full Name English: {fullNameEnglish}, "
+    #       f"Last Name: {lastName}, Last Name English: {lastNameEnglish} ")
+    # print(f"languages: {languages}, "
+    #       f"registered: {registered}, "
+    #     f"age: {age}, "
+    #     f"number: {number}, courses: {courses} "
+    #     f"Country: {country}, Mails: {mails}, Phones: {phone} ")
+    # extraInfo_isTranslatorRequired = extraInfo['isTranslatorRequired']
+    # extraInfo_extraTesting = extraInfo['extraTesting']
+    # extraInfo_isExtraTesting = extraInfo['isExtraTesting']
+    # extraInfo_wheelchair = extraInfo['wheelchair']
+    # print(f"Is Translator Required: {extraInfo_isTranslatorRequired}, "
+    #         f"Extra Testing: {extraInfo_extraTesting}, "
+    #         f"Is Extra Testing: {extraInfo_isExtraTesting}, "
+    #         f"Wheelchair: {extraInfo_wheelchair}")
+    # # print(patient)
+
 
 
 def main():
     global client
     try:
         # Connect to MongoDB
-        client = MongoClient('mongodb://localhost:27017/', serverSelectionTimeoutMS=5000)
-        db = client['emcell']
-        patients_collection = db['patients']
+        client = MongoClient('mongodb://localhost:27017/', serverSelectionTimeoutMS=5000)  # 5-second timeout
+        # Test the connection
+        client.server_info()
 
+        db = client['emcell']  # Connect to emcell database
+        patients_collection = db['patients']  # Get the patients collection
+        # Check if a collection is empty
         document_count = patients_collection.count_documents({})
         if document_count == 0:
             print("The patients collection is empty")
-            return
         else:
             print(f"Found {document_count} documents in the collection")
 
@@ -343,31 +364,17 @@ def main():
             # Read all documents from the patients collection
             patients = patients_collection.find()
 
-            # List to store all patient records
-            all_records = []
             counter = 0
-
-            # Process each patient document
+            # Print each patient document
             for patient in patients:
-                record_patients = look_for(patient)
-                print(record_patients)
-                print(f"Processing patient {counter + 1} with ID: {record_patients['id']}")
-                all_records.append(record_patients)
+                record=look_for(patient)
+                #print(record)
                 counter += 1
-                # if counter % 100 == 0:
+                if counter >15:
+                    break
+                # if counter % 1000 == 0:
                 #     print(f"Processed {counter} patient records.")
-
-            # Create DataFrame from records
-            df = pd.DataFrame(all_records)
-
-            # Generate filename with timestamp
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            excel_filename = f'patients_export_{timestamp}.xlsx'
-
-            # Save to Excel
-            df.to_excel(excel_filename, index=False)
-            print(f"\nProcessed {counter} patient records.")
-            print(f"Data exported successfully to {excel_filename}")
+            # print(f"Processed {counter} patient records.")
 
         except OperationFailure as e:
             print(f"An error occurred while querying the database: {e}")
@@ -377,10 +384,12 @@ def main():
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
     finally:
+        # Close the connection in the finally block to ensure it always happens
         try:
             client.close()
             print("MongoDB connection closed")
         except NameError:
+            # In case the client was never created
             pass
 
 if __name__ == "__main__":
