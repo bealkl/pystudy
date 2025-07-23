@@ -4,7 +4,7 @@
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure
 import re
-
+from country_list import country_list
 from unicodedata import normalize
 
 from old_diagnoses import old_diagnoses
@@ -52,7 +52,12 @@ def partners_semantic_analysis(partner):
 
     # gender
     if check_dictionary_key(partner, 'gender'):
-        record['gender'] = partner['gender']
+        if partner['gender'].upper().strip() == "M":
+            record['gender'] = 1
+        elif partner['gender'].upper().strip() == "F":
+            record['gender'] = 2
+        else:
+            record['gender'] = ''
     else:
         record['gender'] = ''
 
@@ -175,7 +180,8 @@ def partners_semantic_analysis(partner):
     # home
     if check_dictionary_key(partner, 'home'):
         if check_dictionary_key(partner['home'], 'country'):
-            record['country']= partner['home']['country'].strip()
+            this_country = partner['home']['country'].strip()
+            record['country']= country_list.get(this_country,'')
         if check_dictionary_key(partner['home'], 'streetAddress'):
             record['streetAddress']= 'Street address: ' + partner['home']['streetAddress'].strip()
 
