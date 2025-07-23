@@ -28,6 +28,7 @@ def check_dictionary_key(doc, key):
         return False
     return True
 
+number_for_generate = {}
 
 def partners_semantic_analysis(partner):
     passport_record: str= ''
@@ -153,8 +154,24 @@ def partners_semantic_analysis(partner):
 
     # created_at
     if check_dictionary_key(partner, 'created_at'):
-        record['created'] = partner['created_at'].strftime("%Y-%m-%d")
+        record['created'] = partner['created_at'].strftime("%y-%m-%d")
 
+    # make number from created_at
+    month= record['created'][3:5]
+    day= record['created'][-2:]
+    year= record['created'][:2]
+    record['number'] = f"{int(day):02d}{int(month):02d}{int(year):02d}"
+    num = number_for_generate.get(record['number'])
+
+    # print(f"record['number']: {record['number']}, num: {num}")
+
+    if num is not None:
+        num = int(num) + 1
+        number_for_generate.update({record['number']:num})
+        record['number'] += f"-{num}"
+    else:
+        number_for_generate[record['number']] = 1
+        record['number'] += '-1'  # Default to '01' if no number found
     # updated_at - Останні зміни
     if check_dictionary_key(partner, 'updated_at'):
         record['updated'] = partner['updated_at'].strftime("%Y-%m-%d")
