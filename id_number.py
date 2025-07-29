@@ -1,24 +1,11 @@
 #!/usr/bin/env python3
 from pymongo import MongoClient
+from id_file_func import save_id_numbers, load_id_numbers
 from pymongo.errors import OperationFailure
 import re
 
 id_number = set()
 BATCH_SIZE = 4000  # Process records in batches of 1000
-
-def save_id_numbers(id_numbers, filename='patient_ids.txt'):
-    """Save the set of ID numbers to a text file"""
-    with open(filename, 'w', encoding='utf-8') as f:
-        for number in sorted(id_numbers):
-            f.write(f"{number}\n")
-
-def load_id_numbers(filename='patient_ids.txt'):
-    """Load ID numbers from a text file into a set"""
-    try:
-        with open(filename, 'r', encoding='utf-8') as f:
-            return {line.strip() for line in f if line.strip()}
-    except FileNotFoundError:
-        return set()
 
 def check_dictionary_key(doc, key):
     if key not in doc:
@@ -38,7 +25,8 @@ def normalize_patient_number(number):
         return None
 
     if len(code_numbers[1]) <=0:
-        print(f"{code_numbers}       {number}")
+        code_numbers[1]='888'
+        # print(f"{code_numbers}       {number}")
 
     number_counter = code_numbers[1][1:] if code_numbers[1].startswith('0') else code_numbers[1]
 
@@ -52,11 +40,13 @@ def normalize_patient_number(number):
 
 def process_patients_batch(batch):
     for patient in batch:
+        # print(f"number: {patient.get('number', 'N/A')}, name: {patient.get('name', 'N/A')}")
         if check_dictionary_key(patient, 'number'):
+            # print(f"number: {patient.get('number', 'N/A')}")
             code_of_number = normalize_patient_number(patient['number'])
             if code_of_number:
                 if code_of_number in id_number:
-                    print(f"Duplicate code found: {code_of_number}")
+                    print(f"Duplicate code found: {code_of_number}. patient: {patient}")
                 else:
                     id_number.add(code_of_number)
 
