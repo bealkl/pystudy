@@ -3,22 +3,9 @@ from pymongo import MongoClient
 from pymongo.errors import OperationFailure
 import re
 from old_diagnoses import old_diagnoses
+from dictionary_utils import check_dictionary_key
 from setuptools.command.build_ext import link_shared_object
 
-def check_dictionary_key(doc, key):
-    """
-    Check if key exists and is not empty in dictionary
-    Returns: True if key exists and has value, False otherwise
-    """
-    if key not in doc:  # Key doesn't exist
-        return False
-    if doc[key] is None:  # Key exists but is None
-        return False
-    if isinstance(doc[key], str) and not doc[key].strip():  # Empty string or only whitespace
-        return False
-    if isinstance(doc[key], (list, dict)) and not doc[key]:  # Empty list or dict
-        return False
-    return True
 
 def look_for(patient):
     record= {'id': str(patient['_id'])}
@@ -90,13 +77,18 @@ def look_for(patient):
     # number
     if check_dictionary_key(patient, 'number'):
         numbers = patient['number'].split('-')
-        number_counter = '{}'.format(numbers[1][1:] if numbers[1].startswith('0') else numbers[1])
+        if len(numbers[1]) <=0:
+            numbers[1]='888'
+        if numbers[1].isdigit():
+            numbers[1] = str(int(numbers[1]))  # Convert to integer and back to string to remove leading zeros
+        numbers[1] = numbers[1][:-1] + '99' if numbers[1].endswith('a') else numbers[1]
+        numbers[0]= numbers[0].strip().replace(' ', '')
         if len(numbers[0]) >6:
             # Remove the 4th and 5th symbols (index 3 and 4 in zero-based indexing)
             number_normalize = numbers[0][:4] + numbers[0][6:]
             numbers[0] = number_normalize
         # make the correct number
-        record['number'] = numbers[0] + '-' + str(number_counter)
+        record['number'] = numbers[0] + '-' + numbers[1]
     else:
         record['number'] = ''
 
@@ -117,12 +109,42 @@ def look_for(patient):
         else:
             record['status'] = ''
 
+            # passport
+            record['passports']=''
+            if check_dictionary_key(patient, 'passports'):
+                passports = patient['passports']
+                for passport in passports:
+                    passport_record = ''
+                    if len(record['passports'])> 0:
+                        record['passports'] += '; '
+                    if check_dictionary_key(passport, 'number'):
+                        passport_number = passport['number'].strip()
+                        passport_record = passport_number
+                    if check_dictionary_key(passport, 'kind'):
+                        passport_kind = passport['kind'].strip()
+                        passport_record += ' (' + passport_kind + ')'
+                    if check_dictionary_key(passport, 'validTo'):
+                        passport_valid_to = passport['validTo'].strftime("%Y-%m-%d")
+                        passport_record += ', validTo: ' + passport_valid_to
+                    if check_dictionary_key(passport, 'remark'):
+                        passport_remark = passport['remark'].strip()
+                        if len(passport_remark) > 0:
+                            passport_record += ', : ' + passport_remark
+                    # print(f"{record['code']} - passport_record: {passport_record}")
+                    record['passports'] += passport_record
+
     # fill in the 'countre' field
     if check_dictionary_key(patient, '_countries'):
         regex = r"[a-zA-Z][a-zA-Z]" # Regex to match two-letter country codes
         record['country'] = re.search(regex, patient['_countries']).group()
     else:
         record['country'] = ''
+
+# partner
+    if check_dictionary_key(patient, 'partner_list'):
+        record['partner']=  patient['partner_list'].strip().replace('<br />', '; ')
+    else:
+        record['partner'] = ''
 
     #  Phone numbers
     if check_dictionary_key(patient, '_phones'):
@@ -315,6 +337,18 @@ def look_for(patient):
             record['wheelchair'] = ''
     else:
         record['wheelchair'] = ''
+
+    # sourceLetter
+    if check_dictionary_key(patient, 'sourceLetter'):
+        record['sourceLetter'] = patient['sourceLetter']
+    else:
+        record['sourceLetter'] = ''
+
+    # sourceLetterEnglish
+    if check_dictionary_key(patient, 'sourceLetterEnglish'):
+        record['sourceLetterEnglish'] = patient['sourceLetterEnglish']
+    else:
+        record['sourceLetterEnglish'] = ''
 
     return record
 
