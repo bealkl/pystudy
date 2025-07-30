@@ -53,6 +53,7 @@ cmake-build-*/
 *.iws
 *.xlsx
 *.xls
+*.txt
 # IntelliJ
 out/
 

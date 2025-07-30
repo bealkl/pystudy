@@ -7,27 +7,13 @@ import re
 import pandas as pd
 from datetime import datetime
 from unicodedata import normalize
-
+from id_file_func import save_id_numbers, load_id_numbers
+from dictionary_utils import check_dictionary_key
 from country_list import country_list
 from old_diagnoses import old_diagnoses
 from setuptools.command.build_ext import link_shared_object
 
-
-def check_dictionary_key(doc, key):
-    """
-    Check if key exists and is not empty in dictionary
-    Returns: True if key exists and has value, False otherwise
-    """
-    if key not in doc:  # Key doesn't exist
-        return False
-    if doc[key] is None:  # Key exists but is None
-        return False
-    if isinstance(doc[key], str) and not doc[key].strip():  # Empty string or only whitespace
-        return False
-    if isinstance(doc[key], (list, dict)) and not doc[key]:  # Empty list or dict
-        return False
-    return True
-
+id_number = set()
 number_for_generate = {}
 
 def partners_semantic_analysis(partner):
@@ -160,18 +146,15 @@ def partners_semantic_analysis(partner):
     month= record['created'][3:5]
     day= record['created'][-2:]
     year= record['created'][:2]
-    record['number'] = f"{int(day):02d}{int(month):02d}{int(year):02d}"
-    num = number_for_generate.get(record['number'])
+    record['number'] = f"{int(day):02d}{int(month):02d}{int(year):02d}-"
 
-    # print(f"record['number']: {record['number']}, num: {num}")
+    for i in range(1,1000):
+        # Generate a unique number for the record
+        if f"{record['number']}{i}" not in id_number:
+            record['number'] += f"{i:d}"
+            id_number.add(record['number'])
+            break
 
-    if num is not None:
-        num = int(num) + 1
-        number_for_generate.update({record['number']:num})
-        record['number'] += f"-{num}"
-    else:
-        number_for_generate[record['number']] = 1
-        record['number'] += '-1'  # Default to '01' if no number found
     # updated_at - Останні зміни
     if check_dictionary_key(partner, 'updated_at'):
         record['updated'] = partner['updated_at'].strftime("%Y-%m-%d")
@@ -328,6 +311,12 @@ def main():
             print(f"Found {document_count} documents in the collection")
 
         try:
+            # In the main function, add these lines before the try-finally block:
+            id_number = load_id_numbers()
+            # for number in id_number:
+            #     code_numbers = [item.strip() for item in number.split('-')]
+                # number_for_generate[code_numbers[0]] = code_numbers[1]
+
             partners = partners_collection.find()
             records = []
             counter = 0

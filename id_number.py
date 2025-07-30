@@ -28,7 +28,11 @@ def normalize_patient_number(number):
         code_numbers[1]='888'
         # print(f"{code_numbers}       {number}")
 
-    number_counter = code_numbers[1][1:] if code_numbers[1].startswith('0') else code_numbers[1]
+    # number_counter = code_numbers[1][1:] if code_numbers[1].startswith('0') else code_numbers[1]
+    # Remove 'a' if the second part ends with it
+    number_counter = code_numbers[1][:-1] + '99' if code_numbers[1].endswith('a') else code_numbers[1]
+    if number_counter.isdigit():
+        number_counter = str(int(number_counter))
 
     if len(code_numbers[0]) > 6:
         number_normalize = code_numbers[0][:4] + code_numbers[0][6:]
