@@ -1,38 +1,76 @@
 #!/usr/bin/env python3
-from pymongo import MongoClient
-from pymongo.errors import OperationFailure
 import re
 from old_diagnoses import old_diagnoses
 from dictionary_utils import check_dictionary_key
-from look4patient import look4patient
+from country_list import country_list
 
 
-def look_for(patient):
-    record= {'id': str(patient['_id'])}
+literal={'lastName':'Прізвище контакту',
+         'firstName':'Імʼя контакту',
+         'fatherName':'По батькові',
+         'Email':'Email',
+         'alt_emails': 'Додаткові email',
+         'phone': 'Телефон контакту',
+         'alt_phones': 'Додаткові номери телефонів',
+         'diagnosis': 'Діагноз',
+         'extraDiagnosis': 'Додаткові діагнози',
+         'contacts': 'Контакти',
+         'courses': 'Курси',
+         'cureplans': 'Плани лікування',
+         'remark': 'Примітка',
+         'registered': 'Зареєстрований',
+         'wheelchair': 'Інвалідний візок',
+         'sourceLetter': 'Джерело листа',
+         'sourceLetterEnglish': 'Джерело листа англійською',
+         'country': 'Країна',
+         'partner': 'Партнер',
+         'age': 'Вік',
+         'birthDate': 'Дата народження',
+         'position':'Посада',
+         'last_contact': 'Останній контакт',
+         'sex': 'Стать',
+         'last_update': 'Останні зміни',
+         'address': 'Адреса',
+         'company': 'Компанія',
+         'phone_company': 'Телефон компанії',
+         'email_company': 'Email компанії',
+         'city': 'Місто',
+         'index': 'Індекс',
+         'region': 'Область',
+         'streetAddress': 'Адреса',
+         'website': 'Сайт',
+         'code': 'Код'
+         }
 
+
+
+def look4patient(patient):
+
+    record = {'id': str(patient['_id'])}
     # fill in the 'lastNameOrigin' field
     if check_dictionary_key(patient, 'lastName'):
         record['lastNameOrigin'] = patient['lastName']
     else:
         record['lastNameOrigin'] = ''
 
+
+
     # fill in the 'lastName' field
     if check_dictionary_key(patient, 'lastNameEnglish'):
-        record['lastName'] = patient['lastNameEnglish'].capitalize()
+        record[literal['lastName']] = patient['lastNameEnglish'].capitalize()
     else:
         if check_dictionary_key(patient, 'fullNameEnglish'):
             # If 'lastNameEnglish' doesn't exist, check 'fullNameEnglish'
             # and assign it to 'lastName' in the record
-            record['lastName'] = patient['fullNameEnglish'].capitalize()
+            record[literal['lastName']] = patient['fullNameEnglish'].capitalize()
         else:
             if check_dictionary_key(patient, 'fullName'):
                 # If neither 'lastNameEnglish' nor 'fullNameEnglish' exists,
                 # check 'fullName' and assign it to 'lastName' in the record
-                record['lastName'] = patient['fullName'].capitalize()
+                record[literal['lastName']] = patient['fullName'].capitalize()
             else:
                 # If neither exists, assign an empty string
-                record['lastName'] = patient['number']  # or any other default value
-                # record['lastName'] = ''
+                record[literal['lastName']] = patient['number']  # or any other default value
 
     # fill in the 'firstNameOrigin' field
     if check_dictionary_key(patient, 'firstName'):
@@ -42,15 +80,15 @@ def look_for(patient):
 
     # fill in the 'firstName' field
     if check_dictionary_key(patient, 'firstNameEnglish'):
-        record['firstName'] = patient['firstNameEnglish'].capitalize()
+        record[literal['firstName']] = patient['firstNameEnglish'].capitalize()
     else:
         if check_dictionary_key(patient, 'firstName'):
             # If 'firstNameEnglish' doesn't exist, check 'fullNameEnglish'
             # and assign it to 'firstName' in the record
-            record['firstName'] = patient['firstName'].capitalize()
+            record[literal['firstName']] = patient['firstName'].capitalize()
         else:
             # If neither exists, assign an empty string
-            record['firstName'] = ''
+            record[literal['firstName']] = ''
 
     # age
     if check_dictionary_key(patient, 'age'):
@@ -63,10 +101,12 @@ def look_for(patient):
         record['birthDate'] = patient['birthDate'].strftime("%Y-%m-%d")
 
     # gender
+    record['gender'] = int(0)  # Default value for
     if check_dictionary_key(patient, 'gender'):
-        record['gender'] = patient['gender']
-    else:
-        record['gender'] = ''
+        if patient['gender'].upper().strip() == "M":
+            record['gender'] = int(1)
+        elif patient['gender'].upper().strip() == "F":
+            record['gender'] = int(2)
 
     # language
     if check_dictionary_key(patient, 'language'):
@@ -74,27 +114,57 @@ def look_for(patient):
     else:
         record['language'] = ''
 
+    # # number
+    # if check_dictionary_key(patient, 'number'):
+    #     numbers = patient['number'].split('-')
+    #     if len(numbers[1]) <= 0:
+    #         numbers[1] = '888'
+    #     if numbers[1].isdigit():
+    #         numbers[1] = str(int(numbers[1]))  # Convert to integer and back to string to remove leading zeros
+    #     numbers[1] = numbers[1][:-1] + '99' if numbers[1].endswith('a') else numbers[1]
+    #     numbers[0] = numbers[0].strip().replace(' ', '')
+    #     if len(numbers[0]) > 6:
+    #         # Remove the 4th and 5th symbols (index 3 and 4 in zero-based indexing)
+    #         number_normalize = numbers[0][:4] + numbers[0][6:]
+    #         numbers[0] = number_normalize
+    #     # make the correct number
+    #     record['number'] = numbers[0] + '-' + numbers[1]
+    # else:
+    #     record['number'] = ''
+
     # number
     if check_dictionary_key(patient, 'number'):
-        numbers = patient['number'].split('-')
-        if len(numbers[1]) <=0:
-            numbers[1]='888'
-        if numbers[1].isdigit():
-            numbers[1] = str(int(numbers[1]))  # Convert to integer and back to string to remove leading zeros
-        numbers[1] = numbers[1][:-1] + '99' if numbers[1].endswith('a') else numbers[1]
-        numbers[0]= numbers[0].strip().replace(' ', '')
-        if len(numbers[0]) >6:
-            # Remove the 4th and 5th symbols (index 3 and 4 in zero-based indexing)
-            number_normalize = numbers[0][:4] + numbers[0][6:]
-            numbers[0] = number_normalize
-        # make the correct number
-        record['number'] = numbers[0] + '-' + numbers[1]
+        try:
+            numbers = patient['number'].split('-')
+            if len(numbers[1]) <= 0:
+                numbers[1] = '888'
+            if numbers[1].isdigit():
+                numbers[1] = str(int(numbers[1]))  # Convert to integer and back to string to remove leading zeros
+            numbers[1] = numbers[1][:-1] + '99' if numbers[1].endswith('a') else numbers[1]
+            numbers[0] = numbers[0].strip().replace(' ', '')
+            if len(numbers[0]) > 6:
+                # Remove the 4th and 5th symbols (index 3 and 4 in zero-based indexing)
+                number_normalize = numbers[0][:4] + numbers[0][6:]
+                numbers[0] = number_normalize
+            # make the correct number
+            record['number'] = numbers[0] + '-' + numbers[1]
+        except IndexError:
+            # Handle the case where split() doesn't produce enough elements
+            record['number'] = patient['number']  # Keep original value
+        except Exception as e:
+            # Handle any other unexpected errors
+            print(f"Error processing number {patient['number']}: {str(e)}")
+            record['number'] = ''
     else:
         record['number'] = ''
 
+
+
+
+
     # status
     if check_dictionary_key(patient, 'status'):
-        category_list= { "534261884ca876bb9b7b187a": 'RRV Report Received',
+        category_list = {"534261884ca876bb9b7b187a": 'RRV Report Received',
                          "534261804ca876bb9b7b1878": 'INV (Invited)',
                          "534261904ca876bb9b7b187c": 'FAP First application',
                          "5342619b4ca876bb9b7b187e": 'TRE Treated',
@@ -109,40 +179,41 @@ def look_for(patient):
         else:
             record['status'] = ''
 
-            # passport
-            record['passports']=''
-            if check_dictionary_key(patient, 'passports'):
-                passports = patient['passports']
-                for passport in passports:
-                    passport_record = ''
-                    if len(record['passports'])> 0:
-                        record['passports'] += '; '
-                    if check_dictionary_key(passport, 'number'):
-                        passport_number = passport['number'].strip()
-                        passport_record = passport_number
-                    if check_dictionary_key(passport, 'kind'):
-                        passport_kind = passport['kind'].strip()
-                        passport_record += ' (' + passport_kind + ')'
-                    if check_dictionary_key(passport, 'validTo'):
-                        passport_valid_to = passport['validTo'].strftime("%Y-%m-%d")
-                        passport_record += ', validTo: ' + passport_valid_to
-                    if check_dictionary_key(passport, 'remark'):
-                        passport_remark = passport['remark'].strip()
-                        if len(passport_remark) > 0:
-                            passport_record += ', : ' + passport_remark
-                    # print(f"{record['code']} - passport_record: {passport_record}")
-                    record['passports'] += passport_record
+    # passport
+    record['passports'] = ''
+    if check_dictionary_key(patient, 'passports'):
+        passports = patient['passports']
+        for passport in passports:
+            passport_record = ''
+            if len(record['passports']) > 0:
+                record['passports'] += '; '
+            if check_dictionary_key(passport, 'number'):
+                passport_number = passport['number'].strip()
+                passport_record = passport_number
+            if check_dictionary_key(passport, 'kind'):
+                passport_kind = passport['kind'].strip()
+                passport_record += ' (' + passport_kind + ')'
+            if check_dictionary_key(passport, 'validTo'):
+                passport_valid_to = passport['validTo'].strftime("%Y-%m-%d")
+                passport_record += ', validTo: ' + passport_valid_to
+            if check_dictionary_key(passport, 'remark'):
+                passport_remark = passport['remark'].strip()
+                if len(passport_remark) > 0:
+                    passport_record += ', : ' + passport_remark
+            # print(f"{record['code']} - passport_record: {passport_record}")
+            record['passports'] += passport_record
 
     # fill in the 'countre' field
     if check_dictionary_key(patient, '_countries'):
-        regex = r"[a-zA-Z][a-zA-Z]" # Regex to match two-letter country codes
+        regex = r"[a-zA-Z][a-zA-Z]"  # Regex to match two-letter country codes
         record['country'] = re.search(regex, patient['_countries']).group()
+        record['country'] = country_list.get(record['country'], '')
     else:
         record['country'] = ''
 
-# partner
+    # partner
     if check_dictionary_key(patient, 'partner_list'):
-        record['partner']=  patient['partner_list'].strip().replace('<br />', '; ')
+        record['partner'] = patient['partner_list'].strip().replace('<br />', '; ')
     else:
         record['partner'] = ''
 
@@ -152,15 +223,15 @@ def look_for(patient):
         # Normalize phone numbers by removing spaces and dashes
         # phones = [phone.strip().replace(' ', '').replace('-', '') for phone in phones if phone.strip()]
         record['phone'] = phones[0].strip()
-        skip0=True
+        skip0 = True
         if len(phones) > 1:
             for phone in phones:
                 # If there are multiple phone numbers, take the next ones as alternative phones
                 if skip0:
-                    skip0=False
+                    skip0 = False
                     continue
-                record['alt_phones'] = str(phone).strip()+";"
-        else: # If no phone numbers are found, set to empty strings
+                record['alt_phones'] = str(phone).strip() + ";"
+        else:  # If no phone numbers are found, set to empty strings
             record['alt_phones'] = ''
     else:
         record['phone'] = ''
@@ -172,15 +243,15 @@ def look_for(patient):
         # Normalize emails by removing spaces
         emails = [email.strip() for email in emails if email.strip()]
         record['email'] = emails[0] if emails else ''
-        skip0=True
+        skip0 = True
         if len(emails) > 1:
             for email in emails:
                 # If there are multiple emails, take the next ones as alternative emails
                 if skip0:
-                    skip0=False
+                    skip0 = False
                     continue
-                record['alt_emails'] = str(email).strip()+";"
-        else: # If no emails are found, set to empty strings
+                record['alt_emails'] = str(email).strip() + ";"
+        else:  # If no emails are found, set to empty strings
             record['alt_emails'] = ''
     else:
         record['email'] = ''
@@ -188,28 +259,28 @@ def look_for(patient):
 
     # Diagnosis
     if check_dictionary_key(patient, 'diagnosis_list'):
-        record['diagnosis'] = str(patient['diagnosis_list']).strip().replace("<br />","; ")
+        record['diagnosis'] = str(patient['diagnosis_list']).strip().replace("<br />", "; ")
     else:
         record['diagnosis'] = ''
 
     # Extra diagnosis
     if check_dictionary_key(patient, 'diagnoses'):
-        record['extraDiagnosis']= ''
-        i=1
+        record['extraDiagnosis'] = ''
+        i = 1
         for diag in patient['diagnoses']:
-            record['extraDiagnosis']+= " ("+str(i)+") "
+            record['extraDiagnosis'] += " (" + str(i) + ") "
             for key in diag.keys():
-                this_key=str(diag[key])
+                this_key = str(diag[key])
                 if key == 'diagnosis':
                     # If the key is 'diagnosis', we have to check if it exists in the old_diagnoses dictionary
                     if check_dictionary_key(old_diagnoses, 'diagnosis'):
-                        record['extraDiagnosis'] = record['extraDiagnosis']+"; діагноз: "+ old_diagnoses[this_key]
+                        record['extraDiagnosis'] = record['extraDiagnosis'] + "; діагноз: " + old_diagnoses[this_key]
                     continue
                 if key == '_id':
                     # If the key is '_id', we skip it
                     continue
-                if len(this_key)>0: record['extraDiagnosis']+= str(key) + " " + this_key + "; "
-            i+=1
+                if len(this_key) > 0: record['extraDiagnosis'] += str(key) + " " + this_key + "; "
+            i += 1
     #        print(f"record['extraDiagnosis']: {record['extraDiagnosis']}")
     else:
         record['extraDiagnosis'] = ''
@@ -218,52 +289,52 @@ def look_for(patient):
     if check_dictionary_key(patient, 'contacts'):
         for contact in patient['contacts']:
             address = ''
-            if check_dictionary_key(contact,'country'):
-                country=str(contact['country'])
-                if len(country)>1: address+=country+"; "
-            if check_dictionary_key(contact,'region'):
-                region=str(contact['region'])
-                if len(region)>1: address+=region+"; "
-            if check_dictionary_key(contact,'city'):
-                city=str(contact['city'])
-                if len(city)>1: address+=city+"; "
-            if check_dictionary_key(contact,'index'):
-                index=str(contact['index'])
-                if len(index)>1: address+=index+"; "
-            if check_dictionary_key(contact,'streetAddress'):
-                street_address=str(contact['streetAddress'])
-                if len(street_address)>1: address+=street_address+"; "
-            if check_dictionary_key(contact,'emails'):
+            if check_dictionary_key(contact, 'country'):
+                country = str(contact['country'])
+                if len(country) > 1: address += country + "; "
+            if check_dictionary_key(contact, 'region'):
+                region = str(contact['region'])
+                if len(region) > 1: address += region + "; "
+            if check_dictionary_key(contact, 'city'):
+                city = str(contact['city'])
+                if len(city) > 1: address += city + "; "
+            if check_dictionary_key(contact, 'index'):
+                index = str(contact['index'])
+                if len(index) > 1: address += index + "; "
+            if check_dictionary_key(contact, 'streetAddress'):
+                street_address = str(contact['streetAddress'])
+                if len(street_address) > 1: address += street_address + "; "
+            if check_dictionary_key(contact, 'emails'):
                 for email in contact['emails']:
-                    if check_dictionary_key(email,'address'):
+                    if check_dictionary_key(email, 'address'):
                         email_address = str(email['address']).strip()
                         if len(email_address) > 1:
                             if email_address in record['email']: continue
                             if email_address in record['alt_emails']: continue
                             if len(address) > 0: address += "; "
                             address += email_address
-                    if check_dictionary_key(email,'remark'):
+                    if check_dictionary_key(email, 'remark'):
                         email_remark = str(email['remark']).strip().replace("Origin: ", "")
                         if len(email_remark) > 1:
                             if email_remark in record['email']: continue
                             if email_remark in record['alt_emails']: continue
                             if len(address) > 0: address += "; "
                             address += email_remark
-            if check_dictionary_key(contact,'phones'):
+            if check_dictionary_key(contact, 'phones'):
                 for phone in contact['phones']:
-                    if check_dictionary_key(phone,'number'):
+                    if check_dictionary_key(phone, 'number'):
                         phone_kind = ''
                         phone_number = str(phone['number']).strip()
-                        if check_dictionary_key(phone,'kind'):
+                        if check_dictionary_key(phone, 'kind'):
                             phone_kind = str(phone['kind']).strip()
                             if len(phone_kind) > 1:
-                                phone_kind = "("+phone_kind+")"
+                                phone_kind = "(" + phone_kind + ")"
                         if len(phone_number) > 1:
                             if phone_number in record['phone']: continue
                             if phone_number in record['alt_phones']: continue
                             if len(address) > 0: address += "; "
-                            address += phone_number+ " ("+phone_kind+")"
-                    if check_dictionary_key(phone,'additional'):
+                            address += phone_number + " (" + phone_kind + ")"
+                    if check_dictionary_key(phone, 'additional'):
                         phone_remark = str(phone['additional']).strip().replace("Original: ", "")
                         if len(phone_remark) > 1:
                             if phone_remark in record['phone']: continue
@@ -295,7 +366,7 @@ def look_for(patient):
             if check_dictionary_key(cureplan, 'beginDate'):
                 record['cureplans'] = record['cureplans'] + cureplan['beginDate'].strftime("%Y-%m-%d")
             if check_dictionary_key(cureplan, 'endDate'):
-                record['cureplans'] = record['cureplans'] +".."+ cureplan['endDate'].strftime("%Y-%m-%d")
+                record['cureplans'] = record['cureplans'] + ".." + cureplan['endDate'].strftime("%Y-%m-%d")
             if check_dictionary_key(cureplan, 'bookingWhere'):
                 record['cureplans'] = record['cureplans'] + ", " + str(cureplan['bookingWhere']).strip()
             if check_dictionary_key(cureplan, 'hasBooking'):
@@ -328,7 +399,6 @@ def look_for(patient):
     else:
         record['registered'] = ''
 
-
     # wheelchair
     if check_dictionary_key(patient, 'extraInfo'):
         if check_dictionary_key(patient['extraInfo'], 'wheelchair'):
@@ -351,80 +421,3 @@ def look_for(patient):
         record['sourceLetterEnglish'] = ''
 
     return record
-
-    # country = patient['_countries']
-    # mails = patient['_mails']
-    # phone = patient['_phones']
-    # remark = patient['remark']
-    # courses = patient['courses']
-    # extraInfo = patient['extraInfo']
-    # print(f"ID: {id}, Full Name: {fullName}, Full Name English: {fullNameEnglish}, "
-    #       f"Last Name: {lastName}, Last Name English: {lastNameEnglish} ")
-    # print(f"languages: {languages}, "
-    #       f"registered: {registered}, "
-    #     f"age: {age}, "
-    #     f"number: {number}, courses: {courses} "
-    #     f"Country: {country}, Mails: {mails}, Phones: {phone} ")
-    # extraInfo_isTranslatorRequired = extraInfo['isTranslatorRequired']
-    # extraInfo_extraTesting = extraInfo['extraTesting']
-    # extraInfo_isExtraTesting = extraInfo['isExtraTesting']
-    # extraInfo_wheelchair = extraInfo['wheelchair']
-    # print(f"Is Translator Required: {extraInfo_isTranslatorRequired}, "
-    #         f"Extra Testing: {extraInfo_extraTesting}, "
-    #         f"Is Extra Testing: {extraInfo_isExtraTesting}, "
-    #         f"Wheelchair: {extraInfo_wheelchair}")
-    # # print(patient)
-
-
-
-def main():
-    global client
-    try:
-        # Connect to MongoDB
-        client = MongoClient('mongodb://localhost:27017/', serverSelectionTimeoutMS=5000)  # 5-second timeout
-        # Test the connection
-        client.server_info()
-
-        db = client['emcell']  # Connect to emcell database
-        patients_collection = db['patients']  # Get the patients collection
-        # Check if a collection is empty
-        document_count = patients_collection.count_documents({})
-        if document_count == 0:
-            print("The patients collection is empty")
-        else:
-            print(f"Found {document_count} documents in the collection")
-
-        try:
-            # Read all documents from the patients collection
-            patients = patients_collection.find()
-
-            counter = 0
-            # Print each patient document
-            for patient in patients:
-                record=look_for(patient)
-                #print(record)
-                # counter += 1
-                # if counter >15:
-                #     break
-                # if counter % 1000 == 0:
-                #     print(f"Processed {counter} patient records.")
-            # print(f"Processed {counter} patient records.")
-
-        except OperationFailure as e:
-            print(f"An error occurred while querying the database: {e}")
-
-    except ConnectionError as e:
-        print(f"Could not connect to MongoDB: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Close the connection in the finally block to ensure it always happens
-        try:
-            client.close()
-            print("MongoDB connection closed")
-        except NameError:
-            # In case the client was never created
-            pass
-
-if __name__ == "__main__":
-    main()

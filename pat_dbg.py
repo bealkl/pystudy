@@ -1,0 +1,489 @@
+#!/usr/bin/env python3
+from datetime import datetime
+from pymongo import MongoClient
+from pymongo.errors import OperationFailure
+import pandas as pd
+import mysql.connector
+from mysql.connector import Error
+import re
+from old_diagnoses import old_diagnoses
+from dictionary_utils import check_dictionary_key
+from country_list import country_list
+import numpy as np
+
+
+def setup_database():
+    try:
+        # Initial connection without database
+        mysql_config = {
+            'host': 'localhost',
+            'user': 'root',
+            'password': '2Xw7wpkUy7I3',
+            'collation': 'utf8mb4_general_ci'
+        }
+
+        conn = mysql.connector.connect(**mysql_config)
+        cursor = conn.cursor()
+
+        # Create database if not exists
+        cursor.execute("CREATE DATABASE IF NOT EXISTS crma")
+        cursor.execute("USE crma")
+
+        # Create patients table with all fields from record_pat
+        cursor.execute("""
+                       CREATE TABLE IF NOT EXISTS patients (
+                id VARCHAR(255) PRIMARY KEY,
+                lastNameOrigin VARCHAR(255),
+                lastName VARCHAR(255),
+                firstNameOrigin VARCHAR(255),
+                firstName VARCHAR(255),
+                age VARCHAR(50),
+                birthDate DATE,
+                gender TINYINT DEFAULT 0,
+                language VARCHAR(50),
+                number VARCHAR(50),
+                status VARCHAR(100),
+                passports TEXT,
+                country VARCHAR(100),
+                partner TEXT,
+                phone VARCHAR(100),
+                alt_phones TEXT,
+                email VARCHAR(255),
+                alt_emails TEXT,
+                diagnosis TEXT,
+                extraDiagnosis TEXT,
+                contacts TEXT,
+                courses TEXT,
+                cureplans TEXT,
+                remark TEXT,
+                registered DATE,
+                wheelchair VARCHAR(50),
+                sourceLetter TEXT,
+                sourceLetterEnglish TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci
+                       """)
+
+        conn.commit()
+        return conn, cursor
+
+    except Error as e:
+        print(f"Error setting up database: {e}")
+        return None, None
+
+def write_to_mariadb(record_pat, cursor, conn):
+    try:
+        # Prepare INSERT statement
+        columns = ', '.join(record_pat.keys())
+        placeholders = ', '.join(['%s'] * len(record_pat))
+        query = f"INSERT INTO patients ({columns}) VALUES ({placeholders}) ON DUPLICATE KEY UPDATE "
+        update_clause = ', '.join([f"{col}=VALUES({col})" for col in record_pat.keys()])
+        query += update_clause
+
+        # Convert empty strings to None for DATE fields
+        values = list(record_pat.values())
+        for i, value in enumerate(values):
+            if value == '' and (
+                    'birthDate' in record_pat.keys() and list(record_pat.keys())[i] == 'birthDate' or
+                    'registered' in record_pat.keys() and list(record_pat.keys())[i] == 'registered'
+            ):
+                values[i] = None
+
+        # Execute INSERT
+        cursor.execute(query, values)
+        conn.commit()
+
+    except Error as e:
+        print(f"Error inserting record: {e}")
+        conn.rollback()
+
+# Modify the existing write_patient_records_to_excel function
+def write_patient_records_to_excel(batch_size=100):
+    global conn, cursor, client
+    try:
+        # Setup MariaDB connection
+        conn, cursor = setup_database()
+        if not conn or not cursor:
+            return
+
+        # Connect to MongoDB (your existing code)
+        client = MongoClient('mongodb://localhost:27017/', serverSelectionTimeoutMS=5000)
+        db = client['emcell']
+        patients_collection = db['patients']
+
+        total_documents = patients_collection.count_documents({})
+        print(f"Total documents to process: {total_documents}")
+        processed = 0
+
+        # Process each patient record
+        patients_db = np.arange(10_000_000)
+        patients_db = patients_collection.find()
+        for patient in patients_collection.find():
+                record= {'id': str(patient['_id'])}
+                # fill in the 'lastNameOrigin' field
+                if check_dictionary_key(patient, 'lastName'):
+                    record['lastNameOrigin'] = patient['lastName']
+                else:
+                    record['lastNameOrigin'] = ''
+
+                # fill in the 'lastName' field
+                if check_dictionary_key(patient, 'lastNameEnglish'):
+                    record['lastName'] = patient['lastNameEnglish'].capitalize()
+                else:
+                    if check_dictionary_key(patient, 'fullNameEnglish'):
+                        # If 'lastNameEnglish' doesn't exist, check 'fullNameEnglish'
+                        # and assign it to 'lastName' in the record
+                        record['lastName'] = patient['fullNameEnglish'].capitalize()
+                    else:
+                        if check_dictionary_key(patient, 'fullName'):
+                            # If neither 'lastNameEnglish' nor 'fullNameEnglish' exists,
+                            # check 'fullName' and assign it to 'lastName' in the record
+                            record['lastName'] = patient['fullName'].capitalize()
+                        else:
+                            # If neither exists, assign an empty string
+                            record['lastName'] = patient['number']  # or any other default value
+                            # record['lastName'] = ''
+
+                # fill in the 'firstNameOrigin' field
+                if check_dictionary_key(patient, 'firstName'):
+                    record['firstNameOrigin'] = patient['firstName']
+                else:
+                    record['firstNameOrigin'] = ''
+
+                # fill in the 'firstName' field
+                if check_dictionary_key(patient, 'firstNameEnglish'):
+                    record['firstName'] = patient['firstNameEnglish'].capitalize()
+                else:
+                    if check_dictionary_key(patient, 'firstName'):
+                        # If 'firstNameEnglish' doesn't exist, check 'fullNameEnglish'
+                        # and assign it to 'firstName' in the record
+                        record['firstName'] = patient['firstName'].capitalize()
+                    else:
+                        # If neither exists, assign an empty string
+                        record['firstName'] = ''
+
+                # age
+                if check_dictionary_key(patient, 'age'):
+                    record['age'] = patient['age']
+                else:
+                    record['age'] = ''
+
+                # DOB
+                if check_dictionary_key(patient, 'birthDate'):
+                    record['birthDate'] = patient['birthDate'].strftime("%Y-%m-%d")
+
+                # gender
+                record['gender']= int(0)  # Default value for
+                if check_dictionary_key(patient, 'gender'):
+                    if patient['gender'].upper().strip() == "M":
+                        record['gender'] = int(1)
+                    elif patient['gender'].upper().strip() == "F":
+                        record['gender'] = int(2)
+
+                # language
+                if check_dictionary_key(patient, 'language'):
+                    record['language'] = patient['language']
+                else:
+                    record['language'] = ''
+
+                # number
+                if check_dictionary_key(patient, 'number'):
+                    numbers = patient['number'].split('-')
+                    if len(numbers[1]) <=0:
+                        numbers[1]='888'
+                    if numbers[1].isdigit():
+                        numbers[1] = str(int(numbers[1]))  # Convert to integer and back to string to remove leading zeros
+                    numbers[1] = numbers[1][:-1] + '99' if numbers[1].endswith('a') else numbers[1]
+                    numbers[0]= numbers[0].strip().replace(' ', '')
+                    if len(numbers[0]) >6:
+                        # Remove the 4th and 5th symbols (index 3 and 4 in zero-based indexing)
+                        number_normalize = numbers[0][:4] + numbers[0][6:]
+                        numbers[0] = number_normalize
+                    # make the correct number
+                    record['number'] = numbers[0] + '-' + numbers[1]
+                else:
+                    record['number'] = ''
+
+                # status
+                if check_dictionary_key(patient, 'status'):
+                    category_list= { "534261884ca876bb9b7b187a": 'RRV Report Received',
+                                     "534261804ca876bb9b7b1878": 'INV (Invited)',
+                                     "534261904ca876bb9b7b187c": 'FAP First application',
+                                     "5342619b4ca876bb9b7b187e": 'TRE Treated',
+                                     "534670eed320232052caedc6": 'REF Refused',
+                                     "541d44d556d27127195639f7": 'EAW Early age',
+                                     "5469a52d01bc038d04141865": 'PDD Patient died',
+                                     "54b3c5a2fb4f21a804cba6a5": 'PRF Primary Feedback'}
+                    status1 = str(patient['status'])
+                    if status1 in category_list:
+                        record['status'] = category_list[status1]
+                        # print(f"Status: {category_list[status1]}")
+                    else:
+                        record['status'] = ''
+
+                # passport
+                record['passports']=''
+                if check_dictionary_key(patient, 'passports'):
+                    passports = patient['passports']
+                    for passport in passports:
+                        passport_record = ''
+                        if len(record['passports'])> 0:
+                            record['passports'] += '; '
+                        if check_dictionary_key(passport, 'number'):
+                            passport_number = passport['number'].strip()
+                            passport_record = passport_number
+                        if check_dictionary_key(passport, 'kind'):
+                            passport_kind = passport['kind'].strip()
+                            passport_record += ' (' + passport_kind + ')'
+                        if check_dictionary_key(passport, 'validTo'):
+                            passport_valid_to = passport['validTo'].strftime("%Y-%m-%d")
+                            passport_record += ', validTo: ' + passport_valid_to
+                        if check_dictionary_key(passport, 'remark'):
+                            passport_remark = passport['remark'].strip()
+                            if len(passport_remark) > 0:
+                                passport_record += ', : ' + passport_remark
+                        # print(f"{record['code']} - passport_record: {passport_record}")
+                        record['passports'] += passport_record
+
+                # fill in the 'countre' field
+                if check_dictionary_key(patient, '_countries'):
+                    regex = r"[a-zA-Z][a-zA-Z]" # Regex to match two-letter country codes
+                    record['country'] = re.search(regex, patient['_countries']).group()
+                    record['country']= country_list.get(record['country'],'')
+                else:
+                    record['country'] = ''
+
+                # partner
+                if check_dictionary_key(patient, 'partner_list'):
+                    record['partner']=  patient['partner_list'].strip().replace('<br />', '; ')
+                else:
+                    record['partner'] = ''
+
+                #  Phone numbers
+                if check_dictionary_key(patient, '_phones'):
+                    phones = patient['_phones'].split(',')
+                    # Normalize phone numbers by removing spaces and dashes
+                    # phones = [phone.strip().replace(' ', '').replace('-', '') for phone in phones if phone.strip()]
+                    record['phone'] = phones[0].strip()
+                    skip0=True
+                    if len(phones) > 1:
+                        for phone in phones:
+                            # If there are multiple phone numbers, take the next ones as alternative phones
+                            if skip0:
+                                skip0=False
+                                continue
+                            record['alt_phones'] = str(phone).strip()+";"
+                    else: # If no phone numbers are found, set to empty strings
+                        record['alt_phones'] = ''
+                else:
+                    record['phone'] = ''
+                    record['alt_phones'] = ''
+
+                #  Emails
+                if check_dictionary_key(patient, '_mails'):
+                    emails = patient['_mails'].split(',')
+                    # Normalize emails by removing spaces
+                    emails = [email.strip() for email in emails if email.strip()]
+                    record['email'] = emails[0] if emails else ''
+                    skip0=True
+                    if len(emails) > 1:
+                        for email in emails:
+                            # If there are multiple emails, take the next ones as alternative emails
+                            if skip0:
+                                skip0=False
+                                continue
+                            record['alt_emails'] = str(email).strip()+";"
+                    else: # If no emails are found, set to empty strings
+                        record['alt_emails'] = ''
+                else:
+                    record['email'] = ''
+                    record['alt_emails'] = ''
+
+                # Diagnosis
+                if check_dictionary_key(patient, 'diagnosis_list'):
+                    record['diagnosis'] = str(patient['diagnosis_list']).strip().replace("<br />","; ")
+                else:
+                    record['diagnosis'] = ''
+
+                # Extra diagnosis
+                if check_dictionary_key(patient, 'diagnoses'):
+                    record['extraDiagnosis']= ''
+                    i=1
+                    for diag in patient['diagnoses']:
+                        record['extraDiagnosis']+= " ("+str(i)+") "
+                        for key in diag.keys():
+                            this_key=str(diag[key])
+                            if key == 'diagnosis':
+                                # If the key is 'diagnosis', we have to check if it exists in the old_diagnoses dictionary
+                                if check_dictionary_key(old_diagnoses, 'diagnosis'):
+                                    record['extraDiagnosis'] = record['extraDiagnosis']+"; діагноз: "+ old_diagnoses[this_key]
+                                continue
+                            if key == '_id':
+                                # If the key is '_id', we skip it
+                                continue
+                            if len(this_key)>0: record['extraDiagnosis']+= str(key) + " " + this_key + "; "
+                        i+=1
+                #        print(f"record['extraDiagnosis']: {record['extraDiagnosis']}")
+                else:
+                    record['extraDiagnosis'] = ''
+
+                # contacts
+                if check_dictionary_key(patient, 'contacts'):
+                    for contact in patient['contacts']:
+                        address = ''
+                        if check_dictionary_key(contact,'country'):
+                            country=str(contact['country'])
+                            if len(country)>1: address+=country+"; "
+                        if check_dictionary_key(contact,'region'):
+                            region=str(contact['region'])
+                            if len(region)>1: address+=region+"; "
+                        if check_dictionary_key(contact,'city'):
+                            city=str(contact['city'])
+                            if len(city)>1: address+=city+"; "
+                        if check_dictionary_key(contact,'index'):
+                            index=str(contact['index'])
+                            if len(index)>1: address+=index+"; "
+                        if check_dictionary_key(contact,'streetAddress'):
+                            street_address=str(contact['streetAddress'])
+                            if len(street_address)>1: address+=street_address+"; "
+                        if check_dictionary_key(contact,'emails'):
+                            for email in contact['emails']:
+                                if check_dictionary_key(email,'address'):
+                                    email_address = str(email['address']).strip()
+                                    if len(email_address) > 1:
+                                        if email_address in record['email']: continue
+                                        if email_address in record['alt_emails']: continue
+                                        if len(address) > 0: address += "; "
+                                        address += email_address
+                                if check_dictionary_key(email,'remark'):
+                                    email_remark = str(email['remark']).strip().replace("Origin: ", "")
+                                    if len(email_remark) > 1:
+                                        if email_remark in record['email']: continue
+                                        if email_remark in record['alt_emails']: continue
+                                        if len(address) > 0: address += "; "
+                                        address += email_remark
+                        if check_dictionary_key(contact,'phones'):
+                            for phone in contact['phones']:
+                                if check_dictionary_key(phone,'number'):
+                                    phone_kind = ''
+                                    phone_number = str(phone['number']).strip()
+                                    if check_dictionary_key(phone,'kind'):
+                                        phone_kind = str(phone['kind']).strip()
+                                        if len(phone_kind) > 1:
+                                            phone_kind = "("+phone_kind+")"
+                                    if len(phone_number) > 1:
+                                        if phone_number in record['phone']: continue
+                                        if phone_number in record['alt_phones']: continue
+                                        if len(address) > 0: address += "; "
+                                        address += phone_number+ " ("+phone_kind+")"
+                                if check_dictionary_key(phone,'additional'):
+                                    phone_remark = str(phone['additional']).strip().replace("Original: ", "")
+                                    if len(phone_remark) > 1:
+                                        if phone_remark in record['phone']: continue
+                                        if phone_remark in record['alt_phones']: continue
+                                        if len(address) > 0: address += "; "
+                                        address += phone_remark
+                        record['contacts'] = address.strip().replace("; ; ", ";")
+                else:
+                    record['contacts'] = ''
+
+                # courses
+                if check_dictionary_key(patient, 'courses'):
+                    record['courses'] = ''
+                    for course in patient['courses']:
+                        if check_dictionary_key(course, 'courseBegin'):
+                            record['courses'] = record['courses'] + course['courseBegin'].strftime("%Y-%m-%d")
+                        if check_dictionary_key(course, 'courseEnd'):
+                            record['courses'] = record['courses'] + ".." + course['courseEnd'].strftime("%Y-%m-%d")
+                        if check_dictionary_key(course, 'remark'):
+                            record['courses'] = record['courses'] + ", " + str(course['remark']).strip().replace("Original ", "")
+                        if len(record['courses']) > 0: record['courses'] = record['courses'] + "; "
+                else:
+                    record['courses'] = ''
+
+                # cureplans
+                if check_dictionary_key(patient, 'cureplans'):
+                    record['cureplans'] = ''
+                    for cureplan in patient['cureplans']:
+                        if check_dictionary_key(cureplan, 'beginDate'):
+                            record['cureplans'] = record['cureplans'] + cureplan['beginDate'].strftime("%Y-%m-%d")
+                        if check_dictionary_key(cureplan, 'endDate'):
+                            record['cureplans'] = record['cureplans'] +".."+ cureplan['endDate'].strftime("%Y-%m-%d")
+                        if check_dictionary_key(cureplan, 'bookingWhere'):
+                            record['cureplans'] = record['cureplans'] + ", " + str(cureplan['bookingWhere']).strip()
+                        if check_dictionary_key(cureplan, 'hasBooking'):
+                            if cureplan['hasBooking']:
+                                record['cureplans'] = record['cureplans'] + ", " + "Booking"
+                            else:
+                                record['cureplans'] = record['cureplans'] + ", " + "No Booking"
+                        if check_dictionary_key(cureplan, 'hasTickets'):
+                            if cureplan['hasTickets']:
+                                record['cureplans'] = record['cureplans'] + ", " + "Tickets"
+                            else:
+                                record['cureplans'] = record['cureplans'] + ", " + "No Tickets"
+                        if check_dictionary_key(cureplan, 'payment'):
+                            record['cureplans'] = record['cureplans'] + ", payment" + str(cureplan['payment']).strip()
+                        if check_dictionary_key(cureplan, 'remark'):
+                            record['cureplans'] = record['cureplans'] + ", " + str(cureplan['remark']).strip()
+                        if len(record['cureplans']) > 0: record['cureplans'] = record['cureplans'] + "; "
+                else:
+                    record['cureplans'] = ''
+
+                # registered
+                if check_dictionary_key(patient, 'remark'):
+                    record['remark'] = patient['remark']
+                else:
+                    record['remark'] = ''
+
+                # remark
+                if check_dictionary_key(patient, 'registered'):
+                    record['registered'] = patient['registered'].strftime("%Y-%m-%d")
+                else:
+                    record['registered'] = ''
+
+                # wheelchair
+                if check_dictionary_key(patient, 'extraInfo'):
+                    if check_dictionary_key(patient['extraInfo'], 'wheelchair'):
+                        record['wheelchair'] = patient['extraInfo']['wheelchair']
+                    else:
+                        record['wheelchair'] = ''
+                else:
+                    record['wheelchair'] = ''
+
+                # sourceLetter
+                if check_dictionary_key(patient, 'sourceLetter'):
+                    record['sourceLetter'] = patient['sourceLetter']
+                else:
+                    record['sourceLetter'] = ''
+
+                # sourceLetterEnglish
+                if check_dictionary_key(patient, 'sourceLetterEnglish'):
+                    record['sourceLetterEnglish'] = patient['sourceLetterEnglish']
+                else:
+                    record['sourceLetterEnglish'] = ''
+
+
+
+
+
+
+            # write_to_mariadb(record_pat, cursor, conn)
+        processed += 1
+            # record_pat.clear()
+        if processed % 1000 == 0:
+            print(f"Processed {processed} records")
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            cursor.close()
+            conn.close()
+            print("MariaDB connection closed")
+        if 'client' in locals():
+            client.close()
+            print("MongoDB connection closed")
+
+if __name__ == "__main__":
+    write_patient_records_to_excel()
+    # print("Patient records written to MariaDB successfully.")
