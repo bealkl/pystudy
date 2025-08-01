@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 from pymongo import MongoClient
-from pymongo.errors import OperationFailure
-import re
-from old_diagnoses import old_diagnoses
-from dictionary_utils import check_dictionary_key
-from look4patient import look4patient
+from look4patient_eng import look4patient_eng
 
 import pandas as pd
 from datetime import datetime
@@ -25,7 +21,7 @@ def main():
         print(f"Found {document_count} documents in the collection")
 
         # Initialize variables
-        batch_size = 4000
+        batch_size = 1000
         excel_file = f"patients_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         batch_records = []
         counter = 0
@@ -34,7 +30,8 @@ def main():
         try:
             patients = patients_collection.find()
             for patient in patients:
-                patient_record = look4patient(patient)
+                patient_record = look4patient_eng(patient)
+                print(patient_record)
                 batch_records.append(patient_record)
                 counter += 1
 

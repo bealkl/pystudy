@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import re
+from collections import OrderedDict
 from old_diagnoses import old_diagnoses
 from dictionary_utils import check_dictionary_key
 from country_list import country_list
@@ -42,77 +43,227 @@ literal={'lastName':'Прізвище контакту',
          'code': 'Код'
          }
 
-
+#  Імʼя контакту
+#  Прізвище контакту
+#  По батькові
+#  Email
+#  Додаткові email
+#  Телефон контакту
+#  Додаткові номери телефонів
+#  Посада
+#  Останній контакт
+#  День народження
+#  Стать
+#  Останні зміни
+#  Адреса
+#  Компанія
+#  Телефон
+#  Email компанії
+#  Країна
+#  Місто
+#  Індекс
+#  Область
+#  Адреса
+#  Сайт
+#  Останні зміни
+#  Останній контакт
+#  Вулиця (юр. адреса)
+#  Місто (юр. адреса)
+#  Область (юр. адреса)
+#  Індекс (юр. адреса)
+#  Країна (юр. адреса)
+#  Вулиця (фіз. адреса)
+#  Місто (фіз. адреса)
+#  Область (фіз. адреса)
+#  Індекс (фіз. адреса)
+#  Країна (фіз. адреса)
+#  Довгота
+#  Широта
+#  Категорія
+#  Дисконтна група клієнта
+#  Основний менеджер
+#  Постачальник
+#  Пацієнт
+#  import_custom_5_receptions
+#  import_custom_5_protocol
+#  import_custom_5_protocol_approved
+#  import_custom_5_receptions_medical
+#  import_custom_5_receptions_template
+#  import_custom_5_receptions_records
+#  Персональний менеджер
+#  Код
+#  Паспорт
+#  First name original
+#  Last name original
+#  Країна проживання
+#  Код країни
+#  Телефонний код країни
+#  Регіон
+#  Регіон деталізований
+#  Father Name
+#  Mother Name
+#  Вікова група
+#  Програма лікування
+#  Надання послуги
+#  Діагноз
+#  Опис діагнозу
+#  Reference Patients
+#  Встановив застосунок
+#  FollowUp
+#  Масова розсилка
+#  Проживання
+#  Додатково/Питання
+#  Територія
+#  Персональний код
+#  Контракт
+#  Ексклюзивний контракт
+#  Додатковий телефон
+#  Додатковий E-mail
+#  Додаткові контакти
+# Define the Ukrainian fields as an OrderedDict
+ukrainian_fields = OrderedDict([
+    ("first_name", "Імʼя контакту"),
+    ("last_name", "Прізвище контакту"),
+    ("father_name", "По батькові"),
+    ("email", "Email"),
+    ("additional_emails", "Додаткові email"),
+    ("phone", "Телефон контакту"),
+    ("additional_phones", "Додаткові номери телефонів"),
+    ("position", "Посада"),
+    ("last_contact", "Останній контакт"),
+    ("birthday", "День народження"),
+    ("gender", "Стать"),
+    ("last_update", "Останні зміни"),
+    ("address", "Адреса"),
+    ("company", "Компанія"),
+    ("company_phone", "Телефон"),
+    ("company_email", "Email компанії"),
+    ("country", "Країна"),
+    ("city", "Місто"),
+    ("postal_code", "Індекс"),
+    ("region", "Область"),
+    ("website", "Сайт"),
+    ("legal_street", "Вулиця (юр. адреса)"),
+    ("legal_city", "Місто (юр. адреса)"),
+    ("legal_region", "Область (юр. адреса)"),
+    ("legal_postal_code", "Індекс (юр. адреса)"),
+    ("legal_country", "Країна (юр. адреса)"),
+    ("physical_street", "Вулиця (фіз. адреса)"),
+    ("physical_city", "Місто (фіз. адреса)"),
+    ("physical_region", "Область (фіз. адреса)"),
+    ("physical_postal_code", "Індекс (фіз. адреса)"),
+    ("physical_country", "Країна (фіз. адреса)"),
+    ("longitude", "Довгота"),
+    ("latitude", "Широта"),
+    ("category", "Категорія"),
+    ("discount_group", "Дисконтна група клієнта"),
+    ("main_manager", "Основний менеджер"),
+    ("supplier", "Постачальник"),
+    ("patient", "Пацієнт"),
+    ("personal_manager", "Персональний менеджер"),
+    ("code", "Код"),
+    ("passport", "Паспорт"),
+    ("residence_country", "Країна проживання"),
+    ("country_code", "Код країни"),
+    ("country_phone_code", "Телефонний код країни"),
+    ("region_detailed", "Регіон деталізований"),
+    ("father_name_eng", "Father Name"),
+    ("mother_name", "Mother Name"),
+    ("age_group", "Вікова група"),
+    ("treatment_program", "Програма лікування"),
+    ("service_provision", "Надання послуги"),
+    ("diagnosis", "Діагноз"),
+    ("diagnosis_description", "Опис діагнозу"),
+    ("reference_patients", "Reference Patients"),
+    ("app_installed", "Встановив застосунок"),
+    ("follow_up", "FollowUp"),
+    ("mass_mailing", "Масова розсилка"),
+    ("accommodation", "Проживання"),
+    ("additional_questions", "Додатково/Питання"),
+    ("territory", "Територія"),
+    ("personal_code", "Персональний код"),
+    ("contract", "Контракт"),
+    ("exclusive_contract", "Ексклюзивний контракт"),
+    ("additional_phone", "Додатковий телефон"),
+    ("additional_email", "Додатковий E-mail"),
+    ("additional_contacts", "Додаткові контакти")
+])
 
 def look4patient(patient):
 
-    record = {'id': str(patient['_id'])}
+    record = OrderedDict()
+    for k, v in ukrainian_fields.items():
+        record[k]= ''
+
+    # print(f"record: {record}")
+
+    # record = {'id': str(patient['_id'])}
     # fill in the 'lastNameOrigin' field
-    if check_dictionary_key(patient, 'lastName'):
-        record['lastNameOrigin'] = patient['lastName']
-    else:
-        record['lastNameOrigin'] = ''
+    # if check_dictionary_key(patient, 'lastName'):
+    #     record['lastNameOrigin'] = patient['lastName']
+    # else:
+    #     record['lastNameOrigin'] = ''
 
 
 
     # fill in the 'lastName' field
     if check_dictionary_key(patient, 'lastNameEnglish'):
-        record[literal['lastName']] = patient['lastNameEnglish'].capitalize()
+        record['last_name'] = patient['lastNameEnglish'].capitalize()
     else:
         if check_dictionary_key(patient, 'fullNameEnglish'):
             # If 'lastNameEnglish' doesn't exist, check 'fullNameEnglish'
             # and assign it to 'lastName' in the record
-            record[literal['lastName']] = patient['fullNameEnglish'].capitalize()
+            record['last_name'] = patient['fullNameEnglish'].capitalize()
         else:
             if check_dictionary_key(patient, 'fullName'):
                 # If neither 'lastNameEnglish' nor 'fullNameEnglish' exists,
                 # check 'fullName' and assign it to 'lastName' in the record
-                record[literal['lastName']] = patient['fullName'].capitalize()
+                record[['last_name'] = patient['fullName'].capitalize()
             else:
                 # If neither exists, assign an empty string
-                record[literal['lastName']] = patient['number']  # or any other default value
+                record['last_name'] = patient['number']  # or any other default value
 
     # fill in the 'firstNameOrigin' field
-    if check_dictionary_key(patient, 'firstName'):
-        record['firstNameOrigin'] = patient['firstName']
-    else:
-        record['firstNameOrigin'] = ''
+    # if check_dictionary_key(patient, 'firstName'):
+    #     record['firstNameOrigin'] = patient['firstName']
+    # else:
+    #     record['firstNameOrigin'] = ''
 
     # fill in the 'firstName' field
     if check_dictionary_key(patient, 'firstNameEnglish'):
-        record[literal['firstName']] = patient['firstNameEnglish'].capitalize()
+        record[ukrainian_fields['first_name']] = patient['firstNameEnglish'].capitalize()
     else:
         if check_dictionary_key(patient, 'firstName'):
             # If 'firstNameEnglish' doesn't exist, check 'fullNameEnglish'
             # and assign it to 'firstName' in the record
-            record[literal['firstName']] = patient['firstName'].capitalize()
+            record[ukrainian_fields['first_name']] = patient['firstName'].capitalize()
         else:
             # If neither exists, assign an empty string
-            record[literal['firstName']] = ''
+            record[ukrainian_fields['first_name']] = ''
 
     # age
-    if check_dictionary_key(patient, 'age'):
-        record['age'] = patient['age']
-    else:
-        record['age'] = ''
+    # if check_dictionary_key(patient, 'age'):
+    #     record['age'] = patient['age']
+    # else:
+    #     record['age'] = ''
 
     # DOB
     if check_dictionary_key(patient, 'birthDate'):
-        record['birthDate'] = patient['birthDate'].strftime("%Y-%m-%d")
+        record[ukrainian_fields['birthday']] = patient['birthDate'].strftime("%Y-%m-%d")
 
     # gender
-    record['gender'] = int(0)  # Default value for
+    record[ukrainian_fields['gender']] = int(0)  # Default value for
     if check_dictionary_key(patient, 'gender'):
-        if patient['gender'].upper().strip() == "M":
-            record['gender'] = int(1)
+        if patient[ukrainian_fields['gender']].upper().strip() == "M":
+            record[ukrainian_fields['gender']] = int(1)
         elif patient['gender'].upper().strip() == "F":
-            record['gender'] = int(2)
+            record[ukrainian_fields['gender']] = int(2)
 
     # language
-    if check_dictionary_key(patient, 'language'):
-        record['language'] = patient['language']
-    else:
-        record['language'] = ''
+    # if check_dictionary_key(patient, 'language'):
+    #     record['language'] = patient['language']
+    # else:
+    #     record['language'] = ''
 
     # # number
     # if check_dictionary_key(patient, 'number'):
@@ -147,16 +298,16 @@ def look4patient(patient):
                 number_normalize = numbers[0][:4] + numbers[0][6:]
                 numbers[0] = number_normalize
             # make the correct number
-            record['number'] = numbers[0] + '-' + numbers[1]
+            record[ukrainian_fields['number']] = numbers[0] + '-' + numbers[1]
         except IndexError:
             # Handle the case where split() doesn't produce enough elements
-            record['number'] = patient['number']  # Keep original value
+            record[ukrainian_fields['number']] = patient['number']  # Keep original value
         except Exception as e:
             # Handle any other unexpected errors
             print(f"Error processing number {patient['number']}: {str(e)}")
-            record['number'] = ''
+            record[ukrainian_fields['number']] = ''
     else:
-        record['number'] = ''
+        record[ukrainian_fields['number']] = ''
 
 
 
