@@ -135,16 +135,16 @@ def look4patient_eng(patient):
                 number_normalize = numbers[0][:4] + numbers[0][6:]
                 numbers[0] = number_normalize
             # make the correct number
-            record['number'] = numbers[0] + '-' + numbers[1]
+            record['code'] = numbers[0] + '-' + numbers[1]
         except IndexError:
             # Handle the case where split() doesn't produce enough elements
-            record['number'] = patient['number']  # Keep original value
+            record['code'] = patient['number']  # Keep original value
         except Exception as e:
             # Handle any other unexpected errors
             print(f"Error processing number {patient['number']}: {str(e)}")
-            record['number'] = ''
+            record['code'] = ''
     else:
-        record['number'] = ''
+        record['code'] = ''
     # print(f"Number: {record['number']}")
     # status
     if check_dictionary_key(patient, 'status'):
@@ -158,19 +158,21 @@ def look4patient_eng(patient):
                      "54b3c5a2fb4f21a804cba6a5": 'PRF Primary Feedback'}
         status1 = str(patient['status'])
         if status1 in category_list:
-            record['status'] = category_list[status1]
+            record['category'] = category_list[status1]
             # print(f"Status: {category_list[status1]}")
         else:
-            record['status'] = ''
+            record['category'] = ''
 
     # passport
-    record['passports'] = ''
+    record['passport'] = ''
     if check_dictionary_key(patient, 'passports'):
         passports = patient['passports']
+        passport_record = ''
+        passport_remark=''
         for passport in passports:
             passport_record = ''
-            if len(record['passports']) > 0:
-                record['passports'] += '; '
+            if len(record['passport']) > 0:
+                record['passport'] += '; '
             if check_dictionary_key(passport, 'number'):
                 passport_number = passport['number'].strip()
                 passport_record = passport_number
@@ -185,7 +187,7 @@ def look4patient_eng(patient):
             if len(passport_remark) > 0:
                 passport_record += ', : ' + passport_remark
             # print(f"{record['code']} - passport_record: {passport_record}")
-        record['passports'] += passport_record
+        record['passport'] += passport_record
 
     # fill in the 'countre' field
     if check_dictionary_key(patient, '_countries'):
@@ -197,211 +199,220 @@ def look4patient_eng(patient):
 
     # partner
     if check_dictionary_key(patient, 'partner_list'):
-        record['partner'] = patient['partner_list'].strip().replace('<br />', '; ')
+        record['reference_patients'] = patient['partner_list'].strip().replace('<br />', '; ')
     else:
-        record['partner'] = ''
+        record['reference_patients'] = ''
 
-#  Phone numbers
-if check_dictionary_key(patient, '_phones'):
-    phones = patient['_phones'].split(',')
-    # Normalize phone numbers by removing spaces and dashes
-    # phones = [phone.strip().replace(' ', '').replace('-', '') for phone in phones if phone.strip()]
-    record['phone'] = phones[0].strip()
-    skip0 = True
-    if len(phones) > 1:
-        for phone in phones:
-            # If there are multiple phone numbers, take the next ones as alternative phones
-            if skip0:
-                skip0 = False
-                continue
-            record['alt_phones'] = str(phone).strip() + ";"
-    else:  # If no phone numbers are found, set to empty strings
-        record['alt_phones'] = ''
-else:
-    record['phone'] = ''
-    record['alt_phones'] = ''
-
-#  Emails
-if check_dictionary_key(patient, '_mails'):
-    emails = patient['_mails'].split(',')
-    # Normalize emails by removing spaces
-    emails = [email.strip() for email in emails if email.strip()]
-    record['email'] = emails[0] if emails else ''
-    skip0 = True
-    if len(emails) > 1:
-        for email in emails:
-            # If there are multiple emails, take the next ones as alternative emails
-            if skip0:
-                skip0 = False
-                continue
-            record['alt_emails'] = str(email).strip() + ";"
-    else:  # If no emails are found, set to empty strings
-        record['alt_emails'] = ''
-else:
-    record['email'] = ''
-    record['alt_emails'] = ''
-
-# Diagnosis
-if check_dictionary_key(patient, 'diagnosis_list'):
-    record['diagnosis'] = str(patient['diagnosis_list']).strip().replace("<br />", "; ")
-else:
-    record['diagnosis'] = ''
-
-# Extra diagnosis
-if check_dictionary_key(patient, 'diagnoses'):
-    record['extraDiagnosis'] = ''
-    i = 1
-    for diag in patient['diagnoses']:
-        record['extraDiagnosis'] += " (" + str(i) + ") "
-        for key in diag.keys():
-            this_key = str(diag[key])
-            if key == 'diagnosis':
-                # If the key is 'diagnosis', we have to check if it exists in the old_diagnoses dictionary
-                if check_dictionary_key(old_diagnoses, 'diagnosis'):
-                    record['extraDiagnosis'] = record['extraDiagnosis'] + "; діагноз: " + old_diagnoses[this_key]
-                continue
-            if key == '_id':
-                # If the key is '_id', we skip it
-                continue
-            if len(this_key) > 0: record['extraDiagnosis'] += str(key) + " " + this_key + "; "
-        i += 1
-#        print(f"record['extraDiagnosis']: {record['extraDiagnosis']}")
-else:
-    record['extraDiagnosis'] = ''
-
-# contacts
-if check_dictionary_key(patient, 'contacts'):
-    for contact in patient['contacts']:
-        address = ''
-        if check_dictionary_key(contact, 'country'):
-            country = str(contact['country'])
-            if len(country) > 1: address += country + "; "
-        if check_dictionary_key(contact, 'region'):
-            region = str(contact['region'])
-            if len(region) > 1: address += region + "; "
-        if check_dictionary_key(contact, 'city'):
-            city = str(contact['city'])
-            if len(city) > 1: address += city + "; "
-        if check_dictionary_key(contact, 'index'):
-            index = str(contact['index'])
-            if len(index) > 1: address += index + "; "
-        if check_dictionary_key(contact, 'streetAddress'):
-            street_address = str(contact['streetAddress'])
-            if len(street_address) > 1: address += street_address + "; "
-        if check_dictionary_key(contact, 'emails'):
-            for email in contact['emails']:
-                if check_dictionary_key(email, 'address'):
-                    email_address = str(email['address']).strip()
-                    if len(email_address) > 1:
-                        if email_address in record['email']: continue
-                        if email_address in record['alt_emails']: continue
-                        if len(address) > 0: address += "; "
-                        address += email_address
-                if check_dictionary_key(email, 'remark'):
-                    email_remark = str(email['remark']).strip().replace("Origin: ", "")
-                    if len(email_remark) > 1:
-                        if email_remark in record['email']: continue
-                        if email_remark in record['alt_emails']: continue
-                        if len(address) > 0: address += "; "
-                        address += email_remark
-        if check_dictionary_key(contact, 'phones'):
-            for phone in contact['phones']:
-                if check_dictionary_key(phone, 'number'):
-                    phone_kind = ''
-                    phone_number = str(phone['number']).strip()
-                    if check_dictionary_key(phone, 'kind'):
-                        phone_kind = str(phone['kind']).strip()
-                        if len(phone_kind) > 1:
-                            phone_kind = "(" + phone_kind + ")"
-                    if len(phone_number) > 1:
-                        if phone_number in record['phone']: continue
-                        if phone_number in record['alt_phones']: continue
-                        if len(address) > 0: address += "; "
-                        address += phone_number + " (" + phone_kind + ")"
-                if check_dictionary_key(phone, 'additional'):
-                    phone_remark = str(phone['additional']).strip().replace("Original: ", "")
-                    if len(phone_remark) > 1:
-                        if phone_remark in record['phone']: continue
-                        if phone_remark in record['alt_phones']: continue
-                        if len(address) > 0: address += "; "
-                        address += phone_remark
-        record['contacts'] = address.strip().replace("; ; ", ";")
-else:
-    record['contacts'] = ''
-
-# courses
-if check_dictionary_key(patient, 'courses'):
-    record['courses'] = ''
-    for course in patient['courses']:
-        if check_dictionary_key(course, 'courseBegin'):
-            record['courses'] = record['courses'] + course['courseBegin'].strftime("%Y-%m-%d")
-        if check_dictionary_key(course, 'courseEnd'):
-            record['courses'] = record['courses'] + ".." + course['courseEnd'].strftime("%Y-%m-%d")
-        if check_dictionary_key(course, 'remark'):
-            record['courses'] = record['courses'] + ", " + str(course['remark']).strip().replace("Original ", "")
-        if len(record['courses']) > 0: record['courses'] = record['courses'] + "; "
-else:
-    record['courses'] = ''
-
-# cureplans
-if check_dictionary_key(patient, 'cureplans'):
-    record['cureplans'] = ''
-    for cureplan in patient['cureplans']:
-        if check_dictionary_key(cureplan, 'beginDate'):
-            record['cureplans'] = record['cureplans'] + cureplan['beginDate'].strftime("%Y-%m-%d")
-        if check_dictionary_key(cureplan, 'endDate'):
-            record['cureplans'] = record['cureplans'] + ".." + cureplan['endDate'].strftime("%Y-%m-%d")
-        if check_dictionary_key(cureplan, 'bookingWhere'):
-            record['cureplans'] = record['cureplans'] + ", " + str(cureplan['bookingWhere']).strip()
-        if check_dictionary_key(cureplan, 'hasBooking'):
-            if cureplan['hasBooking']:
-                record['cureplans'] = record['cureplans'] + ", " + "Booking"
-            else:
-                record['cureplans'] = record['cureplans'] + ", " + "No Booking"
-        if check_dictionary_key(cureplan, 'hasTickets'):
-            if cureplan['hasTickets']:
-                record['cureplans'] = record['cureplans'] + ", " + "Tickets"
-            else:
-                record['cureplans'] = record['cureplans'] + ", " + "No Tickets"
-        if check_dictionary_key(cureplan, 'payment'):
-            record['cureplans'] = record['cureplans'] + ", payment" + str(cureplan['payment']).strip()
-        if check_dictionary_key(cureplan, 'remark'):
-            record['cureplans'] = record['cureplans'] + ", " + str(cureplan['remark']).strip()
-        if len(record['cureplans']) > 0: record['cureplans'] = record['cureplans'] + "; "
-else:
-    record['cureplans'] = ''
-
-# registered
-if check_dictionary_key(patient, 'remark'):
-    record['remark'] = patient['remark']
-else:
-    record['remark'] = ''
-
-# remark
-if check_dictionary_key(patient, 'registered'):
-    record['registered'] = patient['registered'].strftime("%Y-%m-%d")
-else:
-    record['registered'] = ''
-
-# wheelchair
-if check_dictionary_key(patient, 'extraInfo'):
-    if check_dictionary_key(patient['extraInfo'], 'wheelchair'):
-        record['wheelchair'] = patient['extraInfo']['wheelchair']
+    #  Phone numbers
+    if check_dictionary_key(patient, '_phones'):
+        phones = patient['_phones'].split(',')
+        # Normalize phone numbers by removing spaces and dashes
+        # phones = [phone.strip().replace(' ', '').replace('-', '') for phone in phones if phone.strip()]
+        record['phone'] = phones[0].strip()
+        skip0 = True
+        if len(phones) > 1:
+            for phone_patient in phones:
+                # If there are multiple phone numbers, take the next ones as alternative phones
+                if skip0:
+                    skip0 = False
+                    continue
+                record['additional_phones'] = str(phone_patient).strip() + ";"
+        else:  # If no phone numbers are found, set to empty strings
+            record['additional_phones'] = ''
     else:
-        record['wheelchair'] = ''
-else:
-    record['wheelchair'] = ''
+        record['phone'] = ''
+        record['additional_phones'] = ''
 
-# sourceLetter
-if check_dictionary_key(patient, 'sourceLetter'):
-    record['sourceLetter'] = patient['sourceLetter']
-else:
-    record['sourceLetter'] = ''
+    #  Emails
+    if check_dictionary_key(patient, '_mails'):
+        emails = patient['_mails'].split(',')
+        # Normalize emails by removing spaces
+        emails = [email_patient.strip() for email_patient in emails if email_patient.strip()]
+        record['email'] = emails[0] if emails else ''
+        skip0 = True
+        if len(emails) > 1:
+            for email_patient in emails:
+                # If there are multiple emails, take the next ones as alternative emails
+                if skip0:
+                    skip0 = False
+                    continue
+                record['additional_emails'] = str(email_patient).strip() + ";"
+        else:  # If no emails are found, set to empty strings
+            record['additional_emails'] = ''
+    else:
+        record['email'] = ''
+        record['additional_emails'] = ''
 
-# sourceLetterEnglish
-if check_dictionary_key(patient, 'sourceLetterEnglish'):
-    record['sourceLetterEnglish'] = patient['sourceLetterEnglish']
-else:
-    record['sourceLetterEnglish'] = ''
+    # Diagnosis
+    if check_dictionary_key(patient, 'diagnosis_list'):
+        record['diagnosis'] = str(patient['diagnosis_list']).strip().replace("<br />", "; ")
+    else:
+        record['diagnosis'] = ''
 
-return record
+    # Extra diagnosis
+    if check_dictionary_key(patient, 'diagnoses'):
+        record['diagnosis_description'] = ''
+        i = 1
+        for diag in patient['diagnoses']:
+            record['diagnosis_description'] += " (" + str(i) + ") "
+            for key in diag.keys():
+                this_key = str(diag[key])
+                if key == 'diagnosis':
+                    # If the key is 'diagnosis', we have to check if it exists in the old_diagnoses dictionary
+                    if check_dictionary_key(old_diagnoses, 'diagnosis'):
+                        record['diagnosis_description'] = record['diagnosis_description'] + "; діагноз: " + old_diagnoses[this_key]
+                    continue
+                if key == '_id':
+                    # If the key is '_id', we skip it
+                    continue
+                if len(this_key) > 0: record['diagnosis_description'] += str(key) + " " + this_key + "; "
+            i += 1
+    else:
+        record['diagnosis_description'] = ''
+
+    # contacts
+    if check_dictionary_key(patient, 'contacts'):
+        for contact in patient['contacts']:
+            address = ''
+            if check_dictionary_key(contact, 'country'):
+                country = str(contact['country'])
+                if len(country) > 1: address += country + "; "
+            if check_dictionary_key(contact, 'region'):
+                region = str(contact['region'])
+                if len(region) > 1: address += region + "; "
+            if check_dictionary_key(contact, 'city'):
+                city = str(contact['city'])
+                if len(city) > 1: address += city + "; "
+            if check_dictionary_key(contact, 'index'):
+                index = str(contact['index'])
+                if len(index) > 1: address += index + "; "
+            if check_dictionary_key(contact, 'streetAddress'):
+                street_address = str(contact['streetAddress'])
+                if len(street_address) > 1: address += street_address + "; "
+            if check_dictionary_key(contact, 'emails'):
+                for email in contact['emails']:
+                    if check_dictionary_key(email, 'address'):
+                        email_address = str(email['address']).strip()
+                        if len(email_address) > 1:
+                            if email_address in record['email']: continue
+                            if email_address in record['alt_emails']: continue
+                            if len(address) > 0: address += "; "
+                            address += email_address
+                    if check_dictionary_key(email, 'remark'):
+                        email_remark = str(email['remark']).strip().replace("Origin: ", "")
+                        if len(email_remark) > 1:
+                            if email_remark in record['email']: continue
+                            if email_remark in record['alt_emails']: continue
+                            if len(address) > 0: address += "; "
+                            address += email_remark
+            if check_dictionary_key(contact, 'phones'):
+                for phone in contact['phones']:
+                    if check_dictionary_key(phone, 'number'):
+                        phone_kind = ''
+                        phone_number = str(phone['number']).strip()
+                        if check_dictionary_key(phone, 'kind'):
+                            phone_kind = str(phone['kind']).strip()
+                            if len(phone_kind) > 1:
+                                phone_kind = "(" + phone_kind + ")"
+                        if len(phone_number) > 1:
+                            if phone_number in record['phone']: continue
+                            if phone_number in record['alt_phones']: continue
+                            if len(address) > 0: address += "; "
+                            address += phone_number + " (" + phone_kind + ")"
+                    if check_dictionary_key(phone, 'additional'):
+                        phone_remark = str(phone['additional']).strip().replace("Original: ", "")
+                        if len(phone_remark) > 1:
+                            if phone_remark in record['phone']: continue
+                            if phone_remark in record['alt_phones']: continue
+                            if len(address) > 0: address += "; "
+                            address += phone_remark
+            record['contacts'] = address.strip().replace("; ; ", ";")
+    else:
+        record['contacts'] = ''
+
+    # courses
+    if check_dictionary_key(patient, 'courses'):
+        record['courses'] = ''
+        for course in patient['courses']:
+            if check_dictionary_key(course, 'courseBegin'):
+                record['courses'] = record['courses'] + course['courseBegin'].strftime("%Y-%m-%d")
+            if check_dictionary_key(course, 'courseEnd'):
+                record['courses'] = record['courses'] + ".." + course['courseEnd'].strftime("%Y-%m-%d")
+            if check_dictionary_key(course, 'remark'):
+                record['courses'] = record['courses'] + ", " + str(course['remark']).strip().replace("Original ", "")
+            if len(record['courses']) > 0: record['courses'] = record['courses'] + "; "
+    else:
+        record['courses'] = ''
+
+    # cureplans
+    if check_dictionary_key(patient, 'cureplans'):
+        record['treatment_program'] = ''
+        for cure_plan in patient['cureplans']:
+            if check_dictionary_key(cure_plan, 'beginDate'):
+                record['treatment_program'] = record['treatment_program'] + cure_plan['beginDate'].strftime("%Y-%m-%d")
+            if check_dictionary_key(cure_plan, 'endDate'):
+                record['treatment_program'] = record['treatment_program'] + ".." + cure_plan['endDate'].strftime("%Y-%m-%d")
+            if check_dictionary_key(cure_plan, 'bookingWhere'):
+                record['treatment_program'] = record['treatment_program'] + ", " + str(cure_plan['bookingWhere']).strip()
+            if check_dictionary_key(cure_plan, 'hasBooking'):
+                if cure_plan['hasBooking']:
+                    record['treatment_program'] = record['treatment_program'] + ", " + "Booking"
+                else:
+                    record['treatment_program'] = record['treatment_program'] + ", " + "No Booking"
+            if check_dictionary_key(cure_plan, 'hasTickets'):
+                if cure_plan['hasTickets']:
+                    record['treatment_program'] = record['treatment_program'] + ", " + "Tickets"
+                else:
+                    record['treatment_program'] = record['treatment_program'] + ", " + "No Tickets"
+            if check_dictionary_key(cure_plan, 'payment'):
+                record['treatment_program'] = record['treatment_program'] + ", payment" + str(cure_plan['payment']).strip()
+            if check_dictionary_key(cure_plan, 'remark'):
+                record['treatment_program'] = record['treatment_program'] + ", " + str(cure_plan['remark']).strip()
+            if len(record['treatment_program']) > 0: record['treatment_program'] = record['treatment_program'] + "; "
+    else:
+        record['treatment_program'] = ''
+
+    # registered
+    if check_dictionary_key(patient, 'remark'):
+        record['additional_questions'] = patient['remark']
+    else:
+        record['additional_questions'] = ''
+
+    # remark
+    if check_dictionary_key(patient, 'registered'):
+        record['last_update'] = patient['registered'].strftime("%Y-%m-%d")
+    else:
+        record['last_update'] = ''
+
+    # wheelchair
+    if check_dictionary_key(patient, 'extraInfo'):
+        if check_dictionary_key(patient['extraInfo'], 'wheelchair'):
+            # record['wheelchair'] = patient['extraInfo']['wheelchair']
+            if(len(record['additional_questions']) > 0):
+                record['additional_questions'] = record['additional_questions'] + "; "
+            record['additional_questions'] = "wheelchair: "+ patient['extraInfo']['wheelchair']+ ";"
+    #     else:
+    #         record['wheelchair'] = ''
+    # else:
+    #     record['wheelchair'] = ''
+
+    # sourceLetter
+    if check_dictionary_key(patient, 'sourceLetter'):
+        if(len(record['additional_questions']) > 0):
+            record['additional_questions'] = record['additional_questions'] + "; "
+        record['additional_questions'] = "sourceLetter: "+ patient['sourceLetter']+"; "
+        # record['sourceLetter'] = patient['sourceLetter']
+        # record['sourceLetter'] = patient['sourceLetter']
+    # else:
+    #     record['sourceLetter'] = ''
+
+    # sourceLetterEnglish
+    if check_dictionary_key(patient, 'sourceLetterEnglish'):
+        if(len(record['additional_questions']) > 0):
+            record['additional_questions'] = record['additional_questions'] + "; "
+        record['additional_questions'] = "sourceLetterEnglish: "+patient['sourceLetterEnglish']+"; "
+    #     record['sourceLetterEnglish'] = patient['sourceLetterEnglish']
+    # else:
+    #     record['sourceLetterEnglish'] = ''
+    
+    return record
