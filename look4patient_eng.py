@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import re
 from collections import OrderedDict
+from operator import truediv
+
 from dictionary_utils import check_dictionary_key
 from country_list import country_list
 from old_diagnoses import old_diagnoses
@@ -20,7 +22,7 @@ def look4patient_eng(patient):
     "birthday",
     "gender",
     "last_update",
-    "address",
+    "company_address",
     "company",
     "company_phone",
     "company_email",
@@ -28,7 +30,14 @@ def look4patient_eng(patient):
     "city",
     "postal_code",
     "region",
+    "address",
     "website",
+        # Імʼя контакту	Прізвище контакту	По батькові	Email	Додаткові email	Телефон контакту
+        # Додаткові номери телефонів	Посада	Останній контакт	День народження	Стать	Останні зміни
+        # Адреса	Компанія	Телефон	Email компанії	Країна	Місто	Індекс	Область	Адреса	Сайт
+
+    "last_update2",
+    "last_contact2",
     "legal_street",
     "legal_city",
     "legal_region",
@@ -42,16 +51,33 @@ def look4patient_eng(patient):
     "longitude",
     "latitude",
     "category",
+        # Останні зміни	Останній контакт	Вулиця (юр. адреса)	Місто (юр. адреса)	Область (юр. адреса)
+        # Індекс (юр. адреса)	Країна (юр. адреса)	Вулиця (фіз. адреса)	Місто (фіз. адреса)
+        # Область (фіз. адреса)	Індекс (фіз. адреса)	Країна (фіз. адреса)	Довгота	Широта	Категорія
     "discount_group",
     "main_manager",
     "supplier",
     "patient",
+    "import_custom_5_receptions",
+    "import_custom_5_protocol",
+    "import_custom_5_protocol_approved",
+    "import_custom_5_receptions_medical",
+    "import_custom_5_receptions_template",
+    "import_custom_5_receptions_records",
     "personal_manager",
     "code",
     "passport",
+    "First name original",
+    "Last name original",
     "residence_country",
     "country_code",
+        # Дисконтна група клієнта	Основний менеджер	Постачальник	Пацієнт	import_custom_5_receptions
+        # import_custom_5_protocol	import_custom_5_protocol_approved	import_custom_5_receptions_medical
+        # import_custom_5_receptions_template	import_custom_5_receptions_records	Персональний менеджер
+        # Код	Паспорт	First name original 	Last name original	Країна проживання 	Код країни
+    # first_name	last_name	father_name	email	additional_emails	phone	additional_phones	position
     "country_phone_code",
+    "region2",
     "region_detailed",
     "father_name_eng",
     "mother_name",
@@ -74,11 +100,20 @@ def look4patient_eng(patient):
     "additional_email",
     "additional_contacts"
     ]
+    # first_name	last_name	father_name	email	additional_emails	phone	additional_phones	position
+    # Телефонний код країни	Регіон	Регіон деталізований	Father Name	Mother Name 	Вікова група
+    # Програма лікування	Надання послуги	Діагноз	Опис діагнозу	Reference Patients	Встановив застосунок
+    # FollowUp	Масова розсилка	Проживання	Додатково/Питання	Територія	Персональний код 	Контракт
+    # Ексклюзивний контракт 	Додатковий телефон	Додатковий E-mail	Додаткові контакти
+
 
     record = OrderedDict()
     for k in fields:
         record[k]= ''
 
+    my_debug = False
+
+    if my_debug: print("Step: lastName")
     # fill in the 'lastName' field
     if check_dictionary_key(patient, 'lastNameEnglish'):
         record['last_name'] = patient['lastNameEnglish'].capitalize()
@@ -96,6 +131,7 @@ def look4patient_eng(patient):
                 # If neither exists, assign an empty string
                 record['last_name'] = patient['number']  # or any other default value
 
+    if my_debug: print("Step: firstName")
     # fill in the 'firstName' field
     if check_dictionary_key(patient, 'firstNameEnglish'):
         record['first_name'] = patient['firstNameEnglish'].capitalize()
@@ -108,10 +144,12 @@ def look4patient_eng(patient):
             # If neither exists, assign an empty string
             record['first_name'] = ''
 
+    if my_debug: print("Step: DOB")
     # DOB
     if check_dictionary_key(patient, 'birthDate'):
         record['birthday'] = patient['birthDate'].strftime("%Y-%m-%d")
 
+    if my_debug: print("Step: gender")
     # gender
     record['gender'] = int(0)  # Default value for
     if check_dictionary_key(patient, 'gender'):
@@ -120,6 +158,7 @@ def look4patient_eng(patient):
         elif patient['gender'].upper().strip() == "F":
             record['gender'] = int(2)
 
+    if my_debug: print("Step: number")
     # number
     if check_dictionary_key(patient, 'number'):
         try:
@@ -146,6 +185,8 @@ def look4patient_eng(patient):
     else:
         record['code'] = ''
     # print(f"Number: {record['number']}")
+
+    if my_debug: print("Step: status")
     # status
     if check_dictionary_key(patient, 'status'):
         category_list = {"534261884ca876bb9b7b187a": 'RRV Report Received',
@@ -163,6 +204,7 @@ def look4patient_eng(patient):
         else:
             record['category'] = ''
 
+    if my_debug: print("Step: passport")
     # passport
     record['passport'] = ''
     if check_dictionary_key(patient, 'passports'):
@@ -189,6 +231,7 @@ def look4patient_eng(patient):
             # print(f"{record['code']} - passport_record: {passport_record}")
         record['passport'] += passport_record
 
+    if my_debug: print("Step: countries")
     # fill in the 'countre' field
     if check_dictionary_key(patient, '_countries'):
         regex = r"[a-zA-Z][a-zA-Z]"  # Regex to match two-letter country codes
@@ -197,12 +240,14 @@ def look4patient_eng(patient):
     else:
         record['country'] = ''
 
+    if my_debug: print("Step: partner")
     # partner
     if check_dictionary_key(patient, 'partner_list'):
         record['reference_patients'] = patient['partner_list'].strip().replace('<br />', '; ')
     else:
         record['reference_patients'] = ''
 
+    if my_debug: print("Step: _phones")
     #  Phone numbers
     if check_dictionary_key(patient, '_phones'):
         phones = patient['_phones'].split(',')
@@ -223,6 +268,7 @@ def look4patient_eng(patient):
         record['phone'] = ''
         record['additional_phones'] = ''
 
+    if my_debug: print("Step: _mails")
     #  Emails
     if check_dictionary_key(patient, '_mails'):
         emails = patient['_mails'].split(',')
@@ -243,12 +289,14 @@ def look4patient_eng(patient):
         record['email'] = ''
         record['additional_emails'] = ''
 
+    if my_debug: print("Step: diagnoses")
     # Diagnosis
     if check_dictionary_key(patient, 'diagnosis_list'):
         record['diagnosis'] = str(patient['diagnosis_list']).strip().replace("<br />", "; ")
     else:
         record['diagnosis'] = ''
 
+    if my_debug: print("Step: extra_diagnoses")
     # Extra diagnosis
     if check_dictionary_key(patient, 'diagnoses'):
         record['diagnosis_description'] = ''
@@ -270,6 +318,7 @@ def look4patient_eng(patient):
     else:
         record['diagnosis_description'] = ''
 
+    if my_debug: print("Step: contacts")
     # contacts
     if check_dictionary_key(patient, 'contacts'):
         for contact in patient['contacts']:
@@ -295,14 +344,14 @@ def look4patient_eng(patient):
                         email_address = str(email['address']).strip()
                         if len(email_address) > 1:
                             if email_address in record['email']: continue
-                            if email_address in record['alt_emails']: continue
+                            if email_address in record['additional_email']: continue
                             if len(address) > 0: address += "; "
                             address += email_address
                     if check_dictionary_key(email, 'remark'):
                         email_remark = str(email['remark']).strip().replace("Origin: ", "")
                         if len(email_remark) > 1:
                             if email_remark in record['email']: continue
-                            if email_remark in record['alt_emails']: continue
+                            if email_remark in record['additional_email']: continue
                             if len(address) > 0: address += "; "
                             address += email_remark
             if check_dictionary_key(contact, 'phones'):
@@ -316,34 +365,36 @@ def look4patient_eng(patient):
                                 phone_kind = "(" + phone_kind + ")"
                         if len(phone_number) > 1:
                             if phone_number in record['phone']: continue
-                            if phone_number in record['alt_phones']: continue
+                            if phone_number in record['additional_phone']: continue
                             if len(address) > 0: address += "; "
                             address += phone_number + " (" + phone_kind + ")"
                     if check_dictionary_key(phone, 'additional'):
                         phone_remark = str(phone['additional']).strip().replace("Original: ", "")
                         if len(phone_remark) > 1:
                             if phone_remark in record['phone']: continue
-                            if phone_remark in record['alt_phones']: continue
+                            if phone_remark in record['additional_phone']: continue
                             if len(address) > 0: address += "; "
                             address += phone_remark
             record['contacts'] = address.strip().replace("; ; ", ";")
     else:
         record['contacts'] = ''
 
+    if my_debug: print("Step: courses")
     # courses
     if check_dictionary_key(patient, 'courses'):
-        record['courses'] = ''
+        courses_text = ''
         for course in patient['courses']:
             if check_dictionary_key(course, 'courseBegin'):
-                record['courses'] = record['courses'] + course['courseBegin'].strftime("%Y-%m-%d")
+                courses_text = courses_text + course['courseBegin'].strftime("%Y-%m-%d")
             if check_dictionary_key(course, 'courseEnd'):
-                record['courses'] = record['courses'] + ".." + course['courseEnd'].strftime("%Y-%m-%d")
+                courses_text = courses_text + ".." + course['courseEnd'].strftime("%Y-%m-%d")
             if check_dictionary_key(course, 'remark'):
-                record['courses'] = record['courses'] + ", " + str(course['remark']).strip().replace("Original ", "")
-            if len(record['courses']) > 0: record['courses'] = record['courses'] + "; "
-    else:
-        record['courses'] = ''
+                courses_text = courses_text + ", " + str(course['remark']).strip().replace("Original ", "")
+            if len(courses_text) > 0: courses_text = courses_text + "; "
+            if(len(record['additional_questions']) > 0):
+                record['additional_questions'] = "courses: "+ courses_text+"; "
 
+    if my_debug: print("Step: cure_plans")
     # cureplans
     if check_dictionary_key(patient, 'cureplans'):
         record['treatment_program'] = ''
@@ -372,31 +423,36 @@ def look4patient_eng(patient):
     else:
         record['treatment_program'] = ''
 
+    if my_debug: print("Step: remark")
     # registered
     if check_dictionary_key(patient, 'remark'):
         record['additional_questions'] = patient['remark']
     else:
         record['additional_questions'] = ''
 
+    if my_debug: print("Step: last_update")
     # remark
-    if check_dictionary_key(patient, 'registered'):
-        record['last_update'] = patient['registered'].strftime("%Y-%m-%d")
+    if check_dictionary_key(patient, 'edited_at'):
+        record['last_update'] = patient['edited_at'].strftime("%Y-%m-%d")
     else:
         record['last_update'] = ''
 
+    if my_debug: print("Step: wheelchair")
     # wheelchair
     if check_dictionary_key(patient, 'extraInfo'):
         if check_dictionary_key(patient['extraInfo'], 'wheelchair'):
             # record['wheelchair'] = patient['extraInfo']['wheelchair']
             if(len(record['additional_questions']) > 0):
                 record['additional_questions'] = record['additional_questions'] + "; "
-            record['additional_questions'] = "wheelchair: "+ patient['extraInfo']['wheelchair']+ ";"
+            record['additional_questions'] = "wheelchair: "+ str(patient['extraInfo']['wheelchair'])+ ";"
     #     else:
     #         record['wheelchair'] = ''
     # else:
     #     record['wheelchair'] = ''
 
     # sourceLetter
+
+    if my_debug: print("Step: sourceLetter")
     if check_dictionary_key(patient, 'sourceLetter'):
         if(len(record['additional_questions']) > 0):
             record['additional_questions'] = record['additional_questions'] + "; "
@@ -407,6 +463,8 @@ def look4patient_eng(patient):
     #     record['sourceLetter'] = ''
 
     # sourceLetterEnglish
+
+    if my_debug: print("Step: sourceLetterEnglish")
     if check_dictionary_key(patient, 'sourceLetterEnglish'):
         if(len(record['additional_questions']) > 0):
             record['additional_questions'] = record['additional_questions'] + "; "
@@ -414,5 +472,8 @@ def look4patient_eng(patient):
     #     record['sourceLetterEnglish'] = patient['sourceLetterEnglish']
     # else:
     #     record['sourceLetterEnglish'] = ''
-    
+
+
+    # print(f"Record: {record}")
+
     return record

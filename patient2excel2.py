@@ -21,7 +21,7 @@ def main():
         print(f"Found {document_count} documents in the collection")
 
         # Initialize variables
-        batch_size = 1000
+        batch_size = 4000
         excel_file = f"patients_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         batch_records = []
         counter = 0
@@ -30,8 +30,9 @@ def main():
         try:
             patients = patients_collection.find()
             for patient in patients:
+                # patient_record = patient
                 patient_record = look4patient_eng(patient)
-                print(patient_record)
+                # print(patient_record)
                 batch_records.append(patient_record)
                 counter += 1
 
