@@ -5,6 +5,35 @@ from look4patient_eng import look4patient_eng
 import pandas as pd
 from datetime import datetime
 
+filename='mails.txt'
+
+def manage_emails(base_email):
+    try:
+        count=100
+        i=1
+        while i<count:
+            if base_email==check_duplicate(base_email):
+                base_email = base_email + f"-{i}"
+                i+=1
+            else:
+                # Write to file
+                with open(filename, 'a', encoding='utf-8') as f:
+                    f.write(f"{base_email}\n")
+                return base_email
+    return base_email
+
+def check_duplicate(base_email):
+    try:
+        with open(filename, 'r', encoding='utf-8') as f:
+            for line in f.readlines():
+                email_file = line.strip()
+                if base_email == email_file:
+                    return base_email
+    except FileNotFoundError:
+        pass  # File doesn't exist yet
+
+    return False
+
 def main():
     global client
     try:
@@ -30,9 +59,11 @@ def main():
         try:
             patients = patients_collection.find()
             for patient in patients:
-                # patient_record = patient
                 patient_record = look4patient_eng(patient)
-                # print(patient_record)
+
+                if len(patient_record['email'])>0:
+                    patient_record['email'] = manage_emails(patient_record['email'])
+
                 batch_records.append(patient_record)
                 counter += 1
 
